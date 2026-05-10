@@ -8,12 +8,14 @@ DB_NAME = os.environ['DB_NAME']
 HOST = os.environ['DB_HOST']
 PORT = os.environ['DB_PORT']
 
-SQLALCHEMY_DATABASE_URL = f"mysql+aiomysql://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DB_NAME}"
+SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DB_NAME}"
 
 engine = create_async_engine(
     SQLALCHEMY_DATABASE_URL, 
-    connect_args={"charset": "utf8mb4"},
+    # connect_args={"charset": "utf8mb4"},
     echo=False,
+    pool_size=10,
+    max_overflow=20
 )
 
 local_session = async_sessionmaker(

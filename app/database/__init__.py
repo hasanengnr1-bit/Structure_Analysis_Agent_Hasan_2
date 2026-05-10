@@ -1,2 +1,2 @@
-from .db import get_db
+from .db import get_db, Base
 from .models import User, Project

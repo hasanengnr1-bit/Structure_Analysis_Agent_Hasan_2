@@ -14,4 +14,6 @@ python-multipart==0.0.26
 # PyMuPDF==1.27.2.3
 taskiq-redis==1.2.2
 taskiq==0.12.4
-sqlalchemy-2.0.49
+sqlalchemy==2.0.49
+asyncpg==0.31.0
+alembic==1.18.4
