@@ -6,12 +6,12 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from services import get_logger
-from routes.agent import start_agent
+from routes.agent import agent_routes
 
 logger = get_logger(__name__)
 app = FastAPI()
 
-app.include_router(start_agent.router, prefix="", tags=["Agent"])
+app.include_router(agent_routes.router, prefix="", tags=["Agent"])
 
 app.add_middleware(
     CORSMiddleware,
