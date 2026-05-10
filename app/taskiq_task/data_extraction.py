@@ -22,8 +22,11 @@ result_backend = RedisAsyncResultBackend(
 
 # Setup the Broker
 broker = RedisStreamBroker(
-    url=REDIS_ENDPOINT
+    url=REDIS_ENDPOINT,
+    xread_block=3000
 ).with_result_backend(result_backend)
+
+
 
 logger = get_logger(__file__)
 
