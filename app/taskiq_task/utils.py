@@ -29,7 +29,7 @@ async def fetch_with_id(
     file_uri: str,
 ):
     response = await google_client_async.models.generate_content(
-        model="gemini-3.1-pro-preview",
+        model="gemini-3.1-flash-lite-preview",#"gemini-3.1-pro-preview",
         config=config,
         contents=[
             types.Part.from_uri(file_uri=file_uri, mime_type="application/pdf"),
@@ -82,10 +82,10 @@ async def visual_extractor(file_uri: str) -> dict:
     configs = [
         ("floor", floor_config),
         ("footing", footing_config),
-        ("post", post_config),
-        ("roof", roof_config),
-        ("shear_wall", shear_wall_config),
-        ("wall", wall_config),
+        # ("post", post_config),
+        # ("roof", roof_config),
+        # ("shear_wall", shear_wall_config),
+        # ("wall", wall_config),
     ]
 
     tasks = []
@@ -103,12 +103,12 @@ async def visual_extractor(file_uri: str) -> dict:
         logger.info(f"Finished {call_id}")
 
     return {
-        "roof_system": parsed_data["roof"].model_dump(),
+        # "roof_system": parsed_data["roof"].model_dump(),
         "floor_system": parsed_data["floor"].model_dump(),
         "footing": parsed_data["footing"].model_dump(),
-        "post": parsed_data["post"].model_dump(),
-        "wall": parsed_data["wall"].model_dump(),
-        "shear_wall": parsed_data["shear_wall"].model_dump(),
+        # "post": parsed_data["post"].model_dump(),
+        # "wall": parsed_data["wall"].model_dump(),
+        # "shear_wall": parsed_data["shear_wall"].model_dump(),
     }
 
 

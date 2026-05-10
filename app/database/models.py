@@ -20,4 +20,5 @@ class Project(Base):
         server_default=func.now(), 
         nullable=False
     )
+    task_id = Column(String(255), nullable=False)
     extracted_data = Column(JSON(), nullable=True)
