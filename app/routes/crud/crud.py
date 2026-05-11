@@ -9,7 +9,7 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 # List all
-@router.get("/api/get_all_projects")
+@router.get("/api/crud/get_all_projects")
 async def get_all_projects(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -18,7 +18,7 @@ async def get_all_projects(
 ):
     try:
         query = (
-            select(Project.id, Project.name)
+            select(Project.id, Project.filename)
             .where(Project.user_email == user.email)
             .order_by(Project.start_time.desc())
             .limit(limit)
@@ -33,7 +33,7 @@ async def get_all_projects(
         raise HTTPException(status_code=500, detail="Something Went Wrong!")
 
 # get project
-@router.get("/api/get_project")
+@router.get("/api/crud/get_project")
 async def get_project(
     project_id: str = Query(),
     db: AsyncSession = Depends(get_db),
@@ -43,9 +43,10 @@ async def get_project(
         query = (
             select(Project.extracted_data)
             .where(Project.id == project_id)
-            .first()
         )
         result = await db.execute(query)
+        result = result.scalar_one_or_none()
+
         return {"status_code": 200, "data": result}
     
     except Exception as e:
@@ -53,7 +54,7 @@ async def get_project(
         raise HTTPException(status_code=500, detail="Something Went Wrong!")
 
 # delete project
-@router.delete("/api/delete_project")
+@router.delete("/api/crud/delete_project")
 async def delete_projects(
     project_id: str = Query(),
     db: AsyncSession = Depends(get_db),

@@ -14,7 +14,7 @@ SECRET_KEY = os.environ['ENCRYPTION_SECRET_KEY']
 ALGORITHM = "HS256"
 
 # Password hashing configuration
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # OAuth2 scheme for token extraction
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")

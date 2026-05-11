@@ -23,7 +23,7 @@ oauth.register(
 )
 
 
-@router.get("/login/google")
+@router.get("/api/login/google")
 async def login_via_google(request: Request):
     try:
         # This generates the URL to Google's consent screen and redirects the user

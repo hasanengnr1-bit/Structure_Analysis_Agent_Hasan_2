@@ -19,7 +19,8 @@ asyncpg==0.31.0
 alembic==1.18.4
 aiofiles==25.1.0
 jose==1.0.0
-passlib[bcrypt]
+passlib[argon2]
 python-jose[cryptography]
+pydantic[email]
 authlib==1.7.2
 itsdangerous==2.2.0
