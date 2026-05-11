@@ -1,5 +1,6 @@
 import secrets
 import datetime
+from sqlalchemy import update
 from datetime import timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.concurrency import run_in_threadpool
@@ -75,28 +76,62 @@ async def login(form_data, response: Response, db: AsyncSession = Depends(get_db
         raise HTTPException(status_code=500, detail="Something Went Wrong!")
 
 
+@router.post("/auth/logout")
+async def logout(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+    try:
+        refresh_token = request.cookies.get("refresh_token")
+        if not refresh_token:
+            raise HTTPException(status_code=401, detail="Refresh token missing")
+
+        db_token = (
+            db.query(RefreshToken)
+            .filter(RefreshToken.token == refresh_token, RefreshToken.revoked == False)
+            .first()
+        )
+
+        if not db_token or db_token.expires_at < datetime.utcnow():
+            raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+        stmt = (
+            update(RefreshToken).where(RefreshToken.token == refresh_token).values(revoked=True)
+        )
+        await db.execute(stmt)
+        await db.commit()
+
+        response.delete_cookie("refresh_token")
+        return {"status_code":200, "data":"User logged out Successfully."}
+
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Something Went Wrong!")
+
+
 @router.post("/auth/refresh")
 async def refresh_access_token(request: Request, db: AsyncSession = Depends(get_db)):
-    # Read the refresh token from the HttpOnly cookie
-    refresh_token = request.cookies.get("refresh_token")
-    if not refresh_token:
-        raise HTTPException(status_code=401, detail="Refresh token missing")
+    try:
+        # Read the refresh token from the HttpOnly cookie
+        refresh_token = request.cookies.get("refresh_token")
+        if not refresh_token:
+            raise HTTPException(status_code=401, detail="Refresh token missing")
 
-    # Check the database
-    db_token = (
-        db.query(RefreshToken)
-        .filter(RefreshToken.token == refresh_token, RefreshToken.revoked == False)
-        .first()
-    )
+        # Check the database
+        db_token = (
+            db.query(RefreshToken)
+            .filter(RefreshToken.token == refresh_token, RefreshToken.revoked == False)
+            .first()
+        )
 
-    if not db_token or db_token.expires_at < datetime.utcnow():
-        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+        if not db_token or db_token.expires_at < datetime.utcnow():
+            raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 
-    # Issue a new Access Token
-    new_access_token = create_access_token(data={"sub": db_token.user.email})
+        # Issue a new Access Token
+        new_access_token = create_access_token(data={"sub": db_token.user.email})
 
-    return {
-        "status_code": 200,
-        "access_token": new_access_token,
-        "token_type": "bearer",
-    }
+        return {
+            "status_code": 200,
+            "access_token": new_access_token,
+            "token_type": "bearer",
+        }
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Something Went Wrong!")

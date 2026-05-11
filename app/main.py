@@ -7,12 +7,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from services import get_logger
+from routes.crud import crud
 from routes.agent import agent_routes
+from routes.auth import google_sso, local_auth
+
 
 logger = get_logger(__name__)
 app = FastAPI()
 
 app.include_router(agent_routes.router, prefix="", tags=["Agent"])
+app.include_router(local_auth.router, prefix="", tags=["Auth"])
+app.include_router(google_sso.router, prefix="", tags=["Auth"])
+app.include_router(crud.router, prefix="", tags=["CRUD"])
+
 
 app.add_middleware(
     CORSMiddleware,
