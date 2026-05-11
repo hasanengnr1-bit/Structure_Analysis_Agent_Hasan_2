@@ -19,7 +19,7 @@ async def get_all_projects(
     try:
         query = (
             select(Project.id, Project.name)
-            .where(Project.email == user.email)
+            .where(Project.user_email == user.email)
             .order_by(Project.start_time.desc())
             .limit(limit)
             .offset(offset)
@@ -53,7 +53,7 @@ async def get_project(
         raise HTTPException(status_code=500, detail="Something Went Wrong!")
 
 # delete project
-@router.get("/api/delete_project")
+@router.delete("/api/delete_project")
 async def delete_projects(
     project_id: str = Query(),
     db: AsyncSession = Depends(get_db),

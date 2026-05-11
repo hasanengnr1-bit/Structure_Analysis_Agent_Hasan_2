@@ -54,15 +54,15 @@ async def login(form_data, response: Response, db: AsyncSession = Depends(get_db
         )
         refresh_token = secrets.token_urlsafe(64)
 
-        cookie_max_age = 30 * 24 * 60 * 60 
+        cookie_max_age = 30 * 24 * 60 * 60
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
             httponly=True,  # Prevents JavaScript access (XSS protection)
-            secure=False,    # Ensures cookie is only sent over HTTPS (Set to False for localhost testing)
-            samesite="lax", # CSRF protection.
+            secure=False,  # Ensures cookie is only sent over HTTPS (Set to False for localhost testing)
+            samesite="lax",  # CSRF protection.
             max_age=cookie_max_age,
-            path="/auth"    # Optional but recommended: Only send this cookie to /auth endpoints
+            path="/auth",  # Optional but recommended: Only send this cookie to /auth endpoints
         )
 
         return {
@@ -77,30 +77,35 @@ async def login(form_data, response: Response, db: AsyncSession = Depends(get_db
 
 
 @router.post("/auth/logout")
-async def logout(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+async def logout(
+    request: Request, response: Response, db: AsyncSession = Depends(get_db)
+):
     try:
         refresh_token = request.cookies.get("refresh_token")
         if not refresh_token:
             raise HTTPException(status_code=401, detail="Refresh token missing")
 
         stmt = select(RefreshToken).where(
-            RefreshToken.token == refresh_token, 
-            RefreshToken.revoked == False
+            RefreshToken.token == refresh_token, RefreshToken.revoked == False
         )
         result = await db.execute(stmt)
-        db_token = result.scalar_one_or_none()
+        db_token = result.first()
 
         if not db_token or db_token.expires_at < datetime.utcnow():
-            raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired refresh token"
+            )
 
         stmt = (
-            update(RefreshToken).where(RefreshToken.token == refresh_token).values(revoked=True)
+            update(RefreshToken)
+            .where(RefreshToken.token == refresh_token)
+            .values(revoked=True)
         )
         await db.execute(stmt)
         await db.commit()
 
         response.delete_cookie("refresh_token")
-        return {"status_code":200, "data":"User logged out Successfully."}
+        return {"status_code": 200, "data": "User logged out Successfully."}
 
     except Exception as e:
         logger.error(f"Error: {e}")
@@ -117,14 +122,15 @@ async def refresh_access_token(request: Request, db: AsyncSession = Depends(get_
 
         # Check the database
         stmt = select(RefreshToken).where(
-            RefreshToken.token == refresh_token, 
-            RefreshToken.revoked == False
+            RefreshToken.token == refresh_token, RefreshToken.revoked == False
         )
         result = await db.execute(stmt)
-        db_token = result.scalar_one_or_none()
+        db_token = result.first()
 
         if not db_token or db_token.expires_at < datetime.utcnow():
-            raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+            raise HTTPException(
+                status_code=401, detail="Invalid or expired refresh token"
+            )
 
         # Issue a new Access Token
         new_access_token = create_access_token(data={"sub": db_token.user_email})

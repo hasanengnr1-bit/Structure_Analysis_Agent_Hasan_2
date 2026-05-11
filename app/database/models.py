@@ -33,7 +33,7 @@ class Project(Base):
     extracted_data = Column(JSON(), nullable=True)
 
     __table_args__ = (
-        Index('ix_projects_email_start_time', 'email', 'start_time'),
+        Index('ix_projects_email_start_time', 'user_email', 'start_time'),
     )
 
 
@@ -41,6 +41,6 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
     id = Column(Integer, primary_key=True, index=True)
     token = Column(String, unique=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_email = Column(String(255), ForeignKey("users.email"))
     expires_at = Column(DateTime)
     revoked = Column(Boolean, default=False)
