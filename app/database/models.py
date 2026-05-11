@@ -8,6 +8,7 @@ from sqlalchemy import (
     func,
     Integer,
     Boolean,
+    Index
 )
 
 
@@ -30,6 +31,10 @@ class Project(Base):
     )
     task_id = Column(String(255), nullable=False)
     extracted_data = Column(JSON(), nullable=True)
+
+    __table_args__ = (
+        Index('ix_projects_email_start_time', 'email', 'start_time'),
+    )
 
 
 class RefreshToken(Base):

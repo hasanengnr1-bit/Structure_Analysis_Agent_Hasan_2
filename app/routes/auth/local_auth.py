@@ -1,7 +1,7 @@
 import secrets
 import datetime
-from sqlalchemy import update
 from datetime import timedelta
+from sqlalchemy import update, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.concurrency import run_in_threadpool
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -83,11 +83,12 @@ async def logout(request: Request, response: Response, db: AsyncSession = Depend
         if not refresh_token:
             raise HTTPException(status_code=401, detail="Refresh token missing")
 
-        db_token = (
-            db.query(RefreshToken)
-            .filter(RefreshToken.token == refresh_token, RefreshToken.revoked == False)
-            .first()
+        stmt = select(RefreshToken).where(
+            RefreshToken.token == refresh_token, 
+            RefreshToken.revoked == False
         )
+        result = await db.execute(stmt)
+        db_token = result.scalar_one_or_none()
 
         if not db_token or db_token.expires_at < datetime.utcnow():
             raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
@@ -115,17 +116,18 @@ async def refresh_access_token(request: Request, db: AsyncSession = Depends(get_
             raise HTTPException(status_code=401, detail="Refresh token missing")
 
         # Check the database
-        db_token = (
-            db.query(RefreshToken)
-            .filter(RefreshToken.token == refresh_token, RefreshToken.revoked == False)
-            .first()
+        stmt = select(RefreshToken).where(
+            RefreshToken.token == refresh_token, 
+            RefreshToken.revoked == False
         )
+        result = await db.execute(stmt)
+        db_token = result.scalar_one_or_none()
 
         if not db_token or db_token.expires_at < datetime.utcnow():
             raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 
         # Issue a new Access Token
-        new_access_token = create_access_token(data={"sub": db_token.user.email})
+        new_access_token = create_access_token(data={"sub": db_token.user_email})
 
         return {
             "status_code": 200,

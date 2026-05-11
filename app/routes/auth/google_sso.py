@@ -1,5 +1,6 @@
 import os
 import secrets
+from sqlalchemy import select
 from datetime import timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from authlib.integrations.starlette_client import OAuth, OAuthError
@@ -53,7 +54,11 @@ async def auth_via_google_callback(
         # google_id = user_info.get("sub")  # Google's unique user ID
 
         # Check the database for this user
-        user = db.query(User).filter(User.email == email).first()
+        stmt = select(User).where(
+            User.email == email
+        )
+        user = await db.execute(stmt)
+        user = user.scalar_one_or_none()
 
         # If user doesn't exist, create a new user account on the fly.
         if not user:

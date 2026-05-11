@@ -6,9 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import UploadFile, Query, File, Depends, APIRouter, HTTPException
 
 from database import get_db
-from services import get_logger
 from database import User, Project
 from core.llm.clients import google_client_async
+from services import get_logger, get_current_user
 from taskiq_task import data_extraction_task, broker
 
 router = APIRouter()
@@ -18,7 +18,9 @@ logger = get_logger(__name__)
 
 @router.post("/api/start_agent")
 async def start_agent(
-    structure_plan: UploadFile = File(...), db: AsyncSession = Depends(get_db)
+    structure_plan: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
 ):
     tmp_path = None
     try:
@@ -27,7 +29,9 @@ async def start_agent(
 
         file_content = await structure_plan.read()
 
-        async with aiofiles.tempfile.NamedTemporaryFile(mode='wb', suffix='.pdf', delete=False) as tmp_file:
+        async with aiofiles.tempfile.NamedTemporaryFile(
+            mode="wb", suffix=".pdf", delete=False
+        ) as tmp_file:
             await tmp_file.write(file_content)
             tmp_path = tmp_file.name
 
@@ -42,9 +46,13 @@ async def start_agent(
         task = await data_extraction_task.kiq(
             file_uri=uploaded_file.uri, project_id=project_id
         )
-        
-        project = Project(id=project_id, user_email="test@gmail.com", filename=filename, task_id=str(task.task_id))
-        print(project)
+
+        project = Project(
+            id=project_id,
+            user_email=user.email,
+            filename=filename,
+            task_id=str(task.task_id),
+        )
         db.add(project)
         await db.commit()
 
@@ -55,9 +63,9 @@ async def start_agent(
             "file_uri": uploaded_file.name,
         }
 
-    # except Exception as e:
-    #     logger.error(f"Error: {e}")
-    #     raise HTTPException(status_code=500, detail="Something Went Wrong")
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Something Went Wrong")
 
     finally:
         if tmp_path:
@@ -85,14 +93,6 @@ async def check_status(task_id: str = Query(), db: AsyncSession = Depends(get_db
             }
 
         result = await result_backend.get_result(task_id)
-
-        if result.is_err:
-             return {
-                "task_id": task_id,
-                "status": "WORKER_ERROR",
-                "message": "The worker encountered an execution error.",
-            }
-
         data = result.return_value
 
         if data.get("status") == "success":
@@ -106,7 +106,7 @@ async def check_status(task_id: str = Query(), db: AsyncSession = Depends(get_db
             return {
                 "task_id": task_id,
                 "status": "ERROR",
-                "data": data,
+                "data": data["data"],
             }
 
     except Exception as e:
