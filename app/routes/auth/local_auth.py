@@ -1,0 +1,102 @@
+import secrets
+import datetime
+from datetime import timedelta
+from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi.concurrency import run_in_threadpool
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+
+
+from database import User, get_db, RefreshToken
+from services import create_access_token, verify_password, hash_password, get_logger
+
+router = APIRouter()
+
+logger = get_logger(__file__)
+
+
+@router.post("/auth/signup")
+async def signup(signup_form, db: AsyncSession = Depends(get_db)):
+    try:
+        existing_user = (
+            await db.query(User).filter(User.email == signup_form.email).first()
+        )
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Username already exists")
+
+        hashed_password = await run_in_threadpool(hash_password, signup_form.password)
+        new_user = User(email=signup_form.email, password=hashed_password)
+        db.add(new_user)
+        await db.commit()
+
+        return {"status_code": 200, "data": "User Created Successfully!"}
+
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Something Went Wrong!")
+
+
+@router.post("/auth/login")
+async def login(form_data, response: Response, db: AsyncSession = Depends(get_db)):
+    try:
+        user = await db.query(User).filter(User.email == form_data.email).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        valid_pwd = await run_in_threadpool(
+            verify_password, form_data.password, user.password
+        )
+        if not valid_pwd:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        access_token = create_access_token(
+            data={"sub": user.email}, expires_delta=timedelta(minutes=30)
+        )
+        refresh_token = secrets.token_urlsafe(64)
+
+        cookie_max_age = 30 * 24 * 60 * 60 
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,  # Prevents JavaScript access (XSS protection)
+            secure=False,    # Ensures cookie is only sent over HTTPS (Set to False for localhost testing)
+            samesite="lax", # CSRF protection.
+            max_age=cookie_max_age,
+            path="/auth"    # Optional but recommended: Only send this cookie to /auth endpoints
+        )
+
+        return {
+            "status_code": 200,
+            "access_token": access_token,
+            "token_type": "bearer",
+        }
+
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Something Went Wrong!")
+
+
+@router.post("/auth/refresh")
+async def refresh_access_token(request: Request, db: AsyncSession = Depends(get_db)):
+    # Read the refresh token from the HttpOnly cookie
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="Refresh token missing")
+
+    # Check the database
+    db_token = (
+        db.query(RefreshToken)
+        .filter(RefreshToken.token == refresh_token, RefreshToken.revoked == False)
+        .first()
+    )
+
+    if not db_token or db_token.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+
+    # Issue a new Access Token
+    new_access_token = create_access_token(data={"sub": db_token.user.email})
+
+    return {
+        "status_code": 200,
+        "access_token": new_access_token,
+        "token_type": "bearer",
+    }

@@ -4,6 +4,7 @@ load_dotenv()
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from services import get_logger
 from routes.agent import agent_routes
@@ -20,6 +21,7 @@ app.add_middleware(
     allow_methods=["*"],          # any HTTP method
     allow_headers=["*"],          # any headers
 )
+app.add_middleware(SessionMiddleware, secret_key="replace-this-with-a-secure-random-string")
 
 @app.get("/health")
 async def health():

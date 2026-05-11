@@ -42,8 +42,7 @@ async def start_agent(
         task = await data_extraction_task.kiq(
             file_uri=uploaded_file.uri, project_id=project_id
         )
-        print("Task id: ",task.task_id)
-
+        
         project = Project(id=project_id, user_email="test@gmail.com", filename=filename, task_id=str(task.task_id))
         print(project)
         db.add(project)

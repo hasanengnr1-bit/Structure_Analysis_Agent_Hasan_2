@@ -18,3 +18,8 @@ sqlalchemy==2.0.49
 asyncpg==0.31.0
 alembic==1.18.4
 aiofiles==25.1.0
+jose==1.0.0
+passlib[bcrypt]
+python-jose[cryptography]
+authlib==1.7.2
+itsdangerous==2.2.0
