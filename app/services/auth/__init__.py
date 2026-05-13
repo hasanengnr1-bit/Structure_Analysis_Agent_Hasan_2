@@ -1,4 +1,4 @@
-from auth import (
+from .auth import (
     get_current_user,
     hash_password,
     verify_password,

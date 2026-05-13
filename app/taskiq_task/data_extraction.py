@@ -7,8 +7,8 @@ from sqlalchemy import update
 from taskiq_task.utils import visual_extractor
 from taskiq_redis import RedisAsyncResultBackend, RedisStreamBroker
 
-from services import get_logger
-from database import async_sessionmaker, Project
+from services.utils import get_logger
+from database import local_async_session, Project
 from core.llm.clients import google_client_async
 
 
@@ -44,7 +44,7 @@ async def data_extraction_task(file_uri: str, project_id:str):
         
         extracted_data = await visual_extractor(file_uri=file_uri)
 
-        async with async_sessionmaker() as db:
+        async with local_async_session() as db:
             stmt = (
                 update(Project)
                 .where(Project.id == project_id)

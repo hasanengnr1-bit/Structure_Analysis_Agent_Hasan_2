@@ -18,7 +18,7 @@ engine = create_async_engine(
     max_overflow=20
 )
 
-local_session = async_sessionmaker(
+local_async_session = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
     autocommit=False,
@@ -29,7 +29,7 @@ local_session = async_sessionmaker(
 Base = declarative_base()
 
 async def get_db():
-    async with local_session() as db:
+    async with local_async_session() as db:
         try:
             yield db
         finally:

@@ -1,2 +1,2 @@
-from .db import get_db, Base, async_sessionmaker
+from .db import get_db, Base, local_async_session
 from .models import User, Project, RefreshToken

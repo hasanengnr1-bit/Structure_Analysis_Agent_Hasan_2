@@ -22,7 +22,7 @@ from core.llm.prompts import (
     SYS_PROMPT_SHEAR_WALL,
     SYS_PROMPT_WALL,
 )
-from services import get_logger
+from services.utils import get_logger
 from core.llm.clients import openai_client_async
 from core.utils import fetch_with_id, fetch_with_id_kimi, process_pdf_to_payload
 

@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from services import get_logger
+from services.utils import get_logger
 from routes.crud import crud
 from routes.agent import agent_routes
 from routes.auth import google_sso, local_auth

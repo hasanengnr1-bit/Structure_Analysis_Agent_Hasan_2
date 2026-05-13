@@ -1,3 +1,4 @@
+import json
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, HTTPException
@@ -20,5 +21,8 @@ async def get_final_analysis(
 
     if not extracted_data:
         raise HTTPException(status_code=401, detail="Invalid Project id.")
-
     
+    extracted_data_dict = json.loads(extracted_data)
+
+    for component,data in extracted_data_dict.values():
+        pass
