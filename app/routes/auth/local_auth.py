@@ -6,9 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.concurrency import run_in_threadpool
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
+from services.utils import get_logger
 from schema import SignupForm, LoginForm
 from database import User, get_db, RefreshToken
-from services import create_access_token, verify_password, hash_password, get_logger
+from services.auth import create_access_token, verify_password, hash_password
 
 router = APIRouter()
 

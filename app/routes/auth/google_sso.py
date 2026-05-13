@@ -7,7 +7,8 @@ from authlib.integrations.starlette_client import OAuth, OAuthError
 from fastapi import APIRouter, Request, Depends, Response, HTTPException
 
 from database import get_db, User
-from services import create_access_token, get_logger
+from services.utils import get_logger
+from services.auth import create_access_token
 
 router = APIRouter()
 oauth = OAuth()

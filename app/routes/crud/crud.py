@@ -2,8 +2,9 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, Query, HTTPException
 
+from services.utils import get_logger
 from database import Project, get_db, User
-from services import get_current_user, get_logger
+from services.auth import get_current_user
 
 router = APIRouter()
 logger = get_logger(__name__)

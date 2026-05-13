@@ -7,8 +7,9 @@ from fastapi import UploadFile, Query, File, Depends, APIRouter, HTTPException
 
 from database import get_db
 from database import User, Project
+from services.utils import get_logger
+from services.auth import get_current_user
 from core.llm.clients import google_client_async
-from services import get_logger, get_current_user
 from taskiq_task import data_extraction_task, broker
 
 router = APIRouter()
