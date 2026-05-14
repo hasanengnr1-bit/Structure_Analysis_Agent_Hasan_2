@@ -1,5 +1,143 @@
-from typing import Any, Dict
+from dataclasses import dataclass, field
+from typing import Any, Dict, Optional, Literal, List
 
+@dataclass
+class PostFootingInputs:
+    # Footing dimensions
+    B1: float = 2.5               # ft  — shorter width
+    B2: float = 3.0               # ft  — longer width
+    H: float = 12.0               # in  — thickness
+    cover: float = 3.0            # in  — concrete cover
+    depth: float = 3.0            # ft  — depth below grade
+
+    # Column
+    a1: float = 6.0               # in  — column width in B1 direction
+    a2: float = 6.0               # in  — column width in B2 direction
+    bar_no_col: str = "#4"
+
+    # Material
+    fc: float = 3000.0            # psi
+    fy: float = 60000.0           # psi
+    gamma_conc: float = 150.0     # pcf
+    gamma_soil: float = 120.0     # pcf
+
+    # Loading
+    DL: float = 10_000.0          # lb
+    LL: float = 5_000.0           # lb
+    Mu_ftkips: float = 0.0        # ft-kips
+
+    # Soil
+    q_allow_ton: float = 2.0      # ton/ft^2  (2000 psf)
+    surcharge_ft: float = 0.0     # ft of soil surcharge
+
+    # Reinforcement: bar size (if None, auto-sized)
+    bar_B1: Optional[str] = None  # bar size in B1 direction
+    bar_B2: Optional[str] = None  # bar size in B2 direction
+    bar_spacing_B1: Optional[float] = None  # provided spacing B1 (in)
+    bar_spacing_B2: Optional[float] = None  # provided spacing B2 (in)
+
+    # Location (for punching shear alpha_s)
+    column_location: Literal["interior", "edge", "corner"] = "interior"
+
+
+@dataclass
+class SlabInputs:
+    # Dimensions
+    thickness_in: float = 4.0           # slab thickness (in)
+    length_ft: float = 20.0             # longest dimension
+    width_ft: float = 15.0              # shorter dimension
+
+    # Reinforcement
+    reinforcement_type: str = "wwf"     # "rebar", "wwf", "fiber", "none"
+    rebar_size: Optional[str] = "#4"
+    rebar_spacing_in: float = 18.0
+    wwf_designation: Optional[str] = "6x6-W2.9xW2.9"
+    fiber_type: Optional[str] = "macro_synthetic"
+
+    # Sub-grade
+    sub_base_type: str = "gravel"       # "gravel", "sand", "native"
+    sub_base_depth_in: float = 4.0
+
+    # Vapor barrier / moisture
+    vapor_barrier_mils: int = 10
+    interior_slab: bool = True
+
+    # Loading
+    residential_use: bool = True        # True = light residential, False = garage/light commercial
+    point_load_lbs: float = 2000        # worst point load (furniture, etc.)
+
+    # Exposure / environment
+    exposure_class: str = "interior_dry"  # "interior_dry", "exterior", "freeze_thaw"
+    sulfate_exposure: str = "S0"         # "S0", "S1", "S2", "S3"
+
+    # Concrete
+    fc_psi: float = 3000.0
+    concrete_cover_in: float = 0.0       # top cover (0 for interior, 1.5 for exterior)
+
+    # Options
+    monolithic_with_footing: bool = False
+    control_joint_spacing_ft: Optional[float] = None  # None = auto-compute
+    thickened_edge: bool = False
+    thickened_edge_width_in: float = 12.0
+    thickened_edge_depth_in: float = 12.0
+
+
+@dataclass
+class ShearWallInputs:
+    # Loads & geometry
+    Vs: float = 2295              # Seismic shear at top of wall (lbs)
+    Vw: float = 2815              # Wind shear at top of wall (lbs)
+    wall_length_total: float = 46  # Total wall length (ft)
+    wall_height: float = 12       # Wall height (ft)
+    wall_type: str = "PERF"       # "PERF" / "FTAO" / "SEGMENT"
+    Co: float = 0.97              # PERF adjustment factor
+    sum_Li: float = 19            # Sum of full-height segment lengths (ft)
+    bs_perf: float = 9.75         # Min panel length (ft, PERF)
+
+    # Sheathing & nailing
+    nail_edge_spacing: int = 4    # 3, 4, or 6 in
+    sheathing_both_sides: bool = False
+    panel_thickness: str = "15/32"  # "7/16" or "15/32"
+    fastener_type: str = "10d"
+
+    # Holdown & chord
+    holdown_model: str = "HDU2"
+    chord_studs: str = "(2) 2x6"
+    chord_species: str = "DF No. 2"
+
+    # Sill plate
+    sill_plate_type: str = "(1)-2x"
+    ab_diameter: float = 0.625
+
+    # Out-of-plane
+    WDL: float = 12              # psf wall dead weight
+    SDS: float = 0.625
+    Ie: float = 1.0
+    ka: float = 1.0
+    rho: float = 1.0
+    Ww: float = 18.54            # psf wind MWFRS
+    Ltrib: float = 4.5           # ft tributary height
+
+    # Collector / clips
+    La: float = 8                # ft available wall length for AB
+    clip_model: str = "A35"
+    Lac: float = 28              # ft available collector length
+    clip_spacing: float = 24     # in o/c
+
+    # Panels (up to 5)
+    panels: List[float] = field(default_factory=lambda: [9.75, 7.14, 7.5, 2.0, 5.0])
+
+    # Bearing / chord
+    top_sill_species: str = "HF"  # "DF" or "HF"
+    WDL_plf: float = 95
+    WLL_plf: float = 40
+    WSL_plf: float = 0
+    PDL: float = 0               # Point DL at chord (lbs)
+    PLL: float = 0
+    PSL: float = 0
+    PW: float = 0                # Point wind at chord (lbs)
+    PS: float = 0                # Point seismic at chord (lbs)
+    stud_spacing: int = 16 
 
 # ---------------------------------------------------------------- helpers
 def _normalize_grade(g: str | None) -> str:
@@ -641,7 +779,6 @@ def map_continuous_footing(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[st
 # ================================================================
 def map_pad_footing(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
     """schema.PadFooting -> post_footing_calc.check_post_footing kwargs"""
-    from post_footing_calc import PostFootingInputs
 
     width_in = float(item.get("width_in") or 24)
     length_in = float(item.get("length_in") or 24)
@@ -689,8 +826,7 @@ def map_pad_footing(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]
 # ================================================================
 def map_slab(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
     """schema.SlabOnGrade -> slab_calc.check_slab kwargs"""
-    from slab_calc import SlabInputs
-
+    
     thickness = float(item.get("thickness_in") or 4.0)
     reinf_type = item.get("reinforcement_type") or "wwf"
 
@@ -737,8 +873,7 @@ def map_shear_wall(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
     Lateral demands (Vs, Vw) and seismic parameters (SDS) are expected in env
     from the lateral load analysis — they are not part of the per-wall schema.
     """
-    from shear_wall_calc import ShearWallInputs
-
+    
     wall_height = float(item.get("wall_height_ft") or 8)
     pier_length = float(item.get("pier_length_ft") or 4)
 
