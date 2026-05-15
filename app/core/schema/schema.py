@@ -771,6 +771,106 @@ class WallSystemData(BaseModel):
     bottom_plates: List[BottomPlate]
 
 
+# ----------------------------- Visualization --------------------------
+
+class VisualPoint(BaseModel):
+    x_ft: float | None = None
+    y_ft: float | None = None
+    label: str | None = None
+
+
+class VisualDimension(BaseModel):
+    label: str
+    value_ft: float | None = None
+    direction: Literal["X", "Y", "vertical", "diagonal", "unknown"] = "unknown"
+    source_note: str = ""
+    uncertain: bool = False
+
+
+class VisualFootprint(BaseModel):
+    level: str = "main"
+    overall_length_ft: float | None = None
+    overall_width_ft: float | None = None
+    polygon: List[VisualPoint] | None = None
+    source_note: str = ""
+    uncertain_areas: List[str] | None = None
+
+
+class VisualLevel(BaseModel):
+    name: str
+    elevation_ft: float | None = None
+    story_height_ft: float | None = None
+    source_note: str = ""
+
+
+class VisualElevationView(BaseModel):
+    view_name: str
+    eave_height_ft: float | None = None
+    ridge_height_ft: float | None = None
+    wall_height_ft: float | None = None
+    roof_pitch: str | None = None
+    source_note: str = ""
+    uncertain_areas: List[str] | None = None
+
+
+class VisualRidgeLine(BaseModel):
+    label: str
+    level: str | None = None
+    orientation: Literal["N-S", "E-W", "diagonal", "unknown"] = "unknown"
+    start: VisualPoint | None = None
+    end: VisualPoint | None = None
+    height_ft: float | None = None
+    source_note: str = ""
+    uncertain: bool = False
+
+
+class VisualRoofPlane(BaseModel):
+    label: str
+    roof_type: Literal["gable", "hip", "flat", "mono_slope", "gambrel", "mansard", "unknown"] = "unknown"
+    pitch: str | None = None
+    boundary: List[VisualPoint] | None = None
+    ridge_label: str | None = None
+    source_note: str = ""
+    uncertain_areas: List[str] | None = None
+
+
+class VisualDrawingContext(BaseModel):
+    """
+    Small drawing-only extraction for the visualizer.
+    Structural members are reused from the already extracted schemas.
+    """
+    drawing_scale: str | None = None
+    north_arrow: str | None = None
+    plan_orientation_note: str | None = None
+    dimensions: List[VisualDimension]
+    levels: List[VisualLevel]
+    footprints: List[VisualFootprint]
+    elevations: List[VisualElevationView]
+    ridge_lines: List[VisualRidgeLine]
+    roof_planes: List[VisualRoofPlane]
+    visual_summary: str = ""
+    uncertain_areas: List[str] | None = None
+
+
+class VisualOverlayItem(BaseModel):
+    item_type: str
+    system: str
+    label: str
+    level: str | None = None
+    size: str | None = None
+    location_description: str | None = None
+    span_ft: float | None = None
+    spacing_in: float | None = None
+    note: str = ""
+
+
+class VisualizationData(BaseModel):
+    context: VisualDrawingContext | None = None
+    overlays: List[VisualOverlayItem]
+    source_systems: List[str]
+    visualizer_note: str = ""
+
+
 # =====================================================================
 #  SECTION 4: TOP-LEVEL STATE
 # =====================================================================
@@ -802,3 +902,4 @@ class AgentState(BaseModel):
     post: Optional[PostData] = None
     shear_wall: Optional[ShearWallData] = None
     wall_system: Optional[WallSystemData] = None
+    visualization: Optional[VisualizationData] = None

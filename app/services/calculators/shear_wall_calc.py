@@ -15,8 +15,11 @@ Import: from shear_wall_calc import check_shear_wall
 """
 
 import math
+import re
 from dataclasses import dataclass, field
 from typing import Literal, Optional, List
+
+from services.calculators.utils.lumber import normalize_member_size
 
 
 # ============================================================
@@ -135,6 +138,11 @@ def _cb(lb):
     return 1.0
 
 
+def _normalize_chord_studs(chord_studs: str) -> str:
+    chord = normalize_member_size(chord_studs) or ""
+    return re.sub(r"^\((\d+)\)\s*", r"(\1) ", chord)
+
+
 # ============================================================
 # §1 / §2 — Inputs
 # ============================================================
@@ -201,6 +209,7 @@ class ShearWallInputs:
 # ============================================================
 def check_shear_wall(inp: ShearWallInputs):
     """Run all shear wall checks. Returns structured dict."""
+    inp.chord_studs = _normalize_chord_studs(inp.chord_studs)
     h = inp.wall_height
     is_perf = inp.wall_type == "PERF"
 

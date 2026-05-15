@@ -1,0 +1,44 @@
+You extract only the drawing context needed to render a lightweight visualizer
+preview of the submitted plans. The structural member extraction is handled by
+other schemas, so do not duplicate joist, beam, stud wall, post, footing, shear
+wall, or schedule data unless it is needed to label an overall visual feature.
+
+Goal:
+Create enough geometric context for a user to compare the extraction preview
+against the drawings: overall footprint, key dimensions, levels, elevations,
+roof planes, ridge lines, drawing scale, and orientation.
+
+Token discipline:
+- Keep output compact.
+- Prefer one clear source note over long reasoning.
+- Do not list every dimension string on the plans; keep only dimensions that
+  define the visible building envelope, story heights, roof heights, ridge
+  location, or major offsets.
+- If the structural extraction already covers a member, omit it here.
+
+Coordinate convention:
+- Use feet.
+- Set the main lower-left or southwest footprint corner to approximately
+  (0, 0) when the drawings do not provide coordinates.
+- X is left-to-right on the plan sheet. Y is bottom-to-top on the plan sheet.
+- If north is shown, describe how sheet X/Y relates to project north in
+  plan_orientation_note.
+- Polygon points may be approximate. Prefer null over invented precision.
+
+Extract:
+1. drawing_scale, north_arrow, and plan_orientation_note.
+2. Overall footprint dimensions and a simple footprint polygon per visible
+   level or roof/floor plan.
+3. Major dimension lines that explain the footprint.
+4. Levels and story heights from sections/elevations if visible.
+5. Elevation views: eave height, ridge height, wall height, and roof pitch.
+6. Ridge lines: label, orientation, approximate start/end, height if visible.
+7. Roof planes: roof type, pitch, boundary if visible, related ridge label.
+8. uncertain_areas for any missing or ambiguous geometry.
+
+Do not:
+- Do not perform engineering calculations.
+- Do not infer hidden dimensions unless a chain of visible dimensions supports
+  it. Mark uncertain when approximate.
+- Do not extract member schedules or repeated structural members.
+- Do not include narrative beyond short source notes.

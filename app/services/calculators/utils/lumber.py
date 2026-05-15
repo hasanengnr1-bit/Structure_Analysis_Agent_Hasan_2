@@ -3,6 +3,8 @@ lumber.py
 Reference values, section properties, and CF lookup for multiple species and grades.
 """
 
+import re
+
 # Section properties for sawn lumber (b, d, A, S, I)
 SECTION_PROPS = {
     "2x4": {"b": 1.5, "d": 3.5, "A": 5.25, "S": 3.063, "I": 5.359},
@@ -66,8 +68,19 @@ def normalize_grade(grade: str) -> str:
     if "2.0" in g: return "2.0E"
     return grade
 
+def normalize_member_size(size: str | None) -> str | None:
+    """Normalize extracted member dimensions to the calculator lookup format."""
+    if size is None:
+        return None
+    s = str(size).strip()
+    if not s:
+        return s
+    s = re.sub(r"\s*[xX]\s*", "x", s)
+    return re.sub(r"\s+", " ", s)
+
 def get_CF(size: str, stress_type: str, species: str, grade: str) -> float:
     """Size Factor (CF) per NDS Supplement Tables."""
+    size = normalize_member_size(size)
     species = normalize_species(species)
     grade = normalize_grade(grade)
     
@@ -88,6 +101,7 @@ def get_CF(size: str, stress_type: str, species: str, grade: str) -> float:
         return 1.0
 
 def get_section_props(size: str, plies: int = 1):
+    size = normalize_member_size(size)
     try:
         # Check standard dictionary first
         base = SECTION_PROPS[size]

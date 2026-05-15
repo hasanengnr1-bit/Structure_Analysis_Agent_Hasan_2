@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from services.utils import get_logger
 from database import Project, get_db, User
 from services.auth import get_current_user
+from services.visualization import build_visualization_payload
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -50,6 +51,35 @@ async def get_project(
 
         return {"status_code": 200, "data": result}
     
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        raise HTTPException(status_code=500, detail="Something Went Wrong!")
+
+
+@router.get("/api/crud/get_project_visualization")
+async def get_project_visualization(
+    project_id: str = Query(),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    try:
+        query = (
+            select(Project.extracted_data)
+            .where(Project.id == project_id, Project.user_email == user.email)
+        )
+        result = await db.execute(query)
+        extracted_data = result.scalar_one_or_none()
+
+        if not extracted_data:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        return {
+            "status_code": 200,
+            "data": extracted_data.get("visualization") or build_visualization_payload(extracted_data),
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Something Went Wrong!")

@@ -8,6 +8,7 @@ from core.schema import (
     RoofSystemData,
     WallSystemData,
     PostData,
+    VisualDrawingContext,
     FloorSystemData,
     FootingSystemData,
 )
@@ -17,8 +18,10 @@ from core.llm.prompts import (
     SYS_PROMPT_POST,
     SYS_PROMPT_ROOF,
     SYS_PROMPT_SHEAR_WALL,
+    SYS_PROMPT_VISUAL_CONTEXT,
     SYS_PROMPT_WALL,
 )
+from services.visualization import build_visualization_payload
 
 logger = get_logger(__name__)
 
@@ -78,6 +81,11 @@ async def visual_extractor(file_uri: str) -> dict:
         response_schema=WallSystemData,
         response_mime_type="application/json",
     )
+    visual_context_config = types.GenerateContentConfig(
+        system_instruction=SYS_PROMPT_VISUAL_CONTEXT,
+        response_schema=VisualDrawingContext,
+        response_mime_type="application/json",
+    )
 
     configs = [
         ("floor", floor_config),
@@ -86,6 +94,7 @@ async def visual_extractor(file_uri: str) -> dict:
         ("roof", roof_config),
         ("shear_wall", shear_wall_config),
         ("wall", wall_config),
+        ("visual_context", visual_context_config),
     ]
 
     tasks = []
@@ -102,7 +111,7 @@ async def visual_extractor(file_uri: str) -> dict:
         parsed_data[call_id] = data
         logger.info(f"Finished {call_id}")
 
-    return {
+    extracted_data = {
         "roof_system": parsed_data["roof"].model_dump(),
         "floor_system": parsed_data["floor"].model_dump(),
         "footing": parsed_data["footing"].model_dump(),
@@ -110,6 +119,12 @@ async def visual_extractor(file_uri: str) -> dict:
         "wall": parsed_data["wall"].model_dump(),
         "shear_wall": parsed_data["shear_wall"].model_dump(),
     }
+    extracted_data["visualization"] = build_visualization_payload(
+        extracted_data,
+        context=parsed_data["visual_context"],
+    )
+
+    return extracted_data
 
 
 # except ClientError as e:

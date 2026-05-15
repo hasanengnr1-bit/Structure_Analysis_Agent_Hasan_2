@@ -9,6 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from services.utils import get_logger
 from routes.crud import crud
 from routes.agent import agent_routes
+from routes.analysis import analysis
 from routes.auth import google_sso, local_auth
 
 
@@ -19,6 +20,7 @@ app.include_router(agent_routes.router, prefix="", tags=["Agent"])
 app.include_router(local_auth.router, prefix="", tags=["Auth"])
 app.include_router(google_sso.router, prefix="", tags=["Auth"])
 app.include_router(crud.router, prefix="", tags=["CRUD"])
+app.include_router(analysis.router, prefix="", tags=["Analysis"])
 
 
 app.add_middleware(

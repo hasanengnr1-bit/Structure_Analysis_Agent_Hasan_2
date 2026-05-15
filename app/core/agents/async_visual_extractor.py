@@ -10,6 +10,7 @@ from core.schema import (
     ShearWallData,
     RoofSystemData,
     WallSystemData,
+    VisualDrawingContext,
     PostData,
     FloorSystemData,
     FootingSystemData,
@@ -20,9 +21,11 @@ from core.llm.prompts import (
     SYS_PROMPT_POST,
     SYS_PROMPT_ROOF,
     SYS_PROMPT_SHEAR_WALL,
+    SYS_PROMPT_VISUAL_CONTEXT,
     SYS_PROMPT_WALL,
 )
 from services.utils import get_logger
+from services.visualization import build_visualization_payload
 from core.llm.clients import openai_client_async
 from core.utils import fetch_with_id, fetch_with_id_kimi, process_pdf_to_payload
 
@@ -62,6 +65,11 @@ async def visual_extractor(agent_state: AgentState):
             response_schema=WallSystemData,
             response_mime_type="application/json",
         )
+        visual_context_config = types.GenerateContentConfig(
+            system_instruction=SYS_PROMPT_VISUAL_CONTEXT,
+            response_schema=VisualDrawingContext,
+            response_mime_type="application/json",
+        )
 
         file_uri = agent_state.file_uri
         configs = [
@@ -70,7 +78,8 @@ async def visual_extractor(agent_state: AgentState):
             ("post", post_config),
             ("roof", roof_config),
             ("shear_wall", shear_wall_config),
-            ("wall", wall_config)
+            ("wall", wall_config),
+            ("visual_context", visual_context_config),
         ]
 
         tasks = []
@@ -87,7 +96,7 @@ async def visual_extractor(agent_state: AgentState):
             parsed_data[call_id] = data
             logger.info(f"Finished {call_id}")
 
-        return {
+        extracted_data = {
             "roof_system": parsed_data["roof"].model_dump(),
             "floor_system": parsed_data["floor"].model_dump(),
             "footing": parsed_data["footing"].model_dump(),
@@ -95,6 +104,12 @@ async def visual_extractor(agent_state: AgentState):
             "wall": parsed_data["wall"].model_dump(),
             "shear_wall": parsed_data["shear_wall"].model_dump(),
         }
+        extracted_data["visualization"] = build_visualization_payload(
+            extracted_data,
+            context=parsed_data["visual_context"],
+        )
+
+        return extracted_data
     
     # except ClientError as e:
     #     logger.error(f"Google API Client Error: {e.message}")
@@ -112,6 +127,7 @@ async def visual_extractor_kimi(agent_state: AgentState):
         roof_sys_prompt = SYS_PROMPT_ROOF
         shear_wall_sys_prompt = SYS_PROMPT_SHEAR_WALL
         wall_sys_prompt = SYS_PROMPT_WALL
+        visual_context_sys_prompt = SYS_PROMPT_VISUAL_CONTEXT
 
         sys_prompts = [
             ("floor", floor_sys_prompt),
@@ -119,7 +135,8 @@ async def visual_extractor_kimi(agent_state: AgentState):
             ("post", post_sys_prompt),
             ("roof", roof_sys_prompt),
             ("shear_wall", shear_wall_sys_prompt),
-            ("wall", wall_sys_prompt)
+            ("wall", wall_sys_prompt),
+            ("visual_context", visual_context_sys_prompt),
         ]
 
         tasks = []
@@ -142,7 +159,7 @@ async def visual_extractor_kimi(agent_state: AgentState):
             parsed_data[call_id] = data
             logger.info(f"Finished {call_id}")
 
-        return {
+        extracted_data = {
             "roof_system": parsed_data["roof"],
             "floor_system": parsed_data["floor"],
             "footing": parsed_data["footing"],
@@ -150,6 +167,12 @@ async def visual_extractor_kimi(agent_state: AgentState):
             "wall": parsed_data["wall"],
             "shear_wall": parsed_data["shear_wall"],
         }
+        extracted_data["visualization"] = build_visualization_payload(
+            extracted_data,
+            context=parsed_data["visual_context"],
+        )
+
+        return extracted_data
     
     # except ClientError as e:
     #     logger.error(f"Google API Client Error: {e.message}")

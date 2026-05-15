@@ -60,6 +60,7 @@ async def start_agent(
         return {
             "status_code": 200,
             "data": "data extraction started",
+            "project_id": project_id,
             "task_id": task.task_id,
             "file_uri": uploaded_file.name,
         }
@@ -101,6 +102,7 @@ async def check_status(task_id: str = Query(), db: AsyncSession = Depends(get_db
                 "task_id": task_id,
                 "status": "SUCCESS",
                 "data": data["data"],
+                "project_id": data.get("project_id"),
             }
 
         else:

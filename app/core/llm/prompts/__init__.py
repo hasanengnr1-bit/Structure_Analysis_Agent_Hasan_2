@@ -5,5 +5,6 @@ from .prompt_manager.prompt_manager import (
     SYS_PROMPT_ROOF,
     SYS_PROMPT_SHEAR_WALL,
     SYS_PROMPT_STRUCT_VECTOR,
+    SYS_PROMPT_VISUAL_CONTEXT,
     SYS_PROMPT_WALL,
 )

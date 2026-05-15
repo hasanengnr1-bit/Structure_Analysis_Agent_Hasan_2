@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Literal, List
 
+from services.calculators.utils.lumber import normalize_member_size
+
 @dataclass
 class PostFootingInputs:
     # Footing dimensions
@@ -156,6 +158,10 @@ def _lumber(item: Dict[str, Any], default_species="DF-L", default_grade="No. 2")
     return species, grade
 
 
+def _member_size(raw: Any, default: str) -> str:
+    return normalize_member_size(raw or default) or default
+
+
 def _support_species(item: Dict[str, Any]) -> str:
     """Map support_material enum to a species the engine knows for bearing checks."""
     sm = item.get("support_material")
@@ -257,7 +263,7 @@ def map_stud_wall(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
         name=item.get("zone") or "Stud",
         system="Wall",
         application="Stud",
-        size=item.get("stud_size") or "2x6",
+        size=_member_size(item.get("stud_size"), "2x6"),
         species=species,
         grade=grade,
         length_ft=float(item.get("stud_height_ft") or 10),
@@ -293,7 +299,7 @@ def map_roof_rafter(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]
         name=item.get("zone") or "Rafter",
         system="Roof",
         application="Joist",
-        size=item.get("size") or "2x10",
+        size=_member_size(item.get("size"), "2x10"),
         species=species,
         grade=grade,
         plies=int(item.get("number_of_plies") or 1),
@@ -330,7 +336,7 @@ def map_ceiling_joist(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, An
         name=item.get("zone") or "Ceiling Joist",
         system="Ceiling",
         application="Joist",
-        size=item.get("size") or "2x6",
+        size=_member_size(item.get("size"), "2x6"),
         species=species,
         grade=grade,
         plies=int(item.get("number_of_plies") or 1),
@@ -370,7 +376,7 @@ def map_ridge_beam(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
         name=item.get("zone") or "Ridge Beam",
         system="Roof",
         application="Beam",
-        size=item.get("size") or "4x8",
+        size=_member_size(item.get("size"), "4x8"),
         species=species,
         grade=grade,
         plies=int(item.get("number_of_plies") or 1),
@@ -412,7 +418,7 @@ def map_hip_valley_rafter(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str
         name=item.get("zone") or f"{member_type.title()} Rafter",
         system="Roof",
         application="Beam",
-        size=item.get("size") or "2x10",
+        size=_member_size(item.get("size"), "2x10"),
         species=species,
         grade=grade,
         plies=int(item.get("number_of_plies") or 1),
@@ -453,7 +459,7 @@ def map_roof_drop_beam(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, A
         name=item.get("zone") or "Roof Drop Beam",
         system="Roof",
         application="Beam",
-        size=item.get("size") or "4x8",
+        size=_member_size(item.get("size"), "4x8"),
         species=species,
         grade=grade,
         plies=int(item.get("number_of_plies") or 1),
@@ -493,7 +499,7 @@ def map_roof_flush_beam(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, 
         name=item.get("zone") or "Roof Flush Beam",
         system="Roof",
         application="Beam",
-        size=item.get("size") or "4x8",
+        size=_member_size(item.get("size"), "4x8"),
         species=species,
         grade=grade,
         plies=int(item.get("number_of_plies") or 1),
@@ -537,7 +543,7 @@ def map_floor_joist(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]
         name=item.get("zone") or "Floor Joist",
         system="Floor",
         application="Joist",
-        size=item.get("size") or "2x10",
+        size=_member_size(item.get("size"), "2x10"),
         species=species,
         grade=grade,
         plies=int(item.get("number_of_plies") or 1),
@@ -577,7 +583,7 @@ def map_floor_drop_beam(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, 
         name=item.get("zone") or "Floor Drop Beam",
         system="Floor",
         application="Beam",
-        size=item.get("size") or "4x8",
+        size=_member_size(item.get("size"), "4x8"),
         species=species,
         grade=grade,
         plies=int(item.get("number_of_plies") or 1),
@@ -617,7 +623,7 @@ def map_floor_flush_beam(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str,
         name=item.get("zone") or "Floor Flush Beam",
         system="Floor",
         application="Beam",
-        size=item.get("size") or "4x8",
+        size=_member_size(item.get("size"), "4x8"),
         species=species,
         grade=grade,
         plies=int(item.get("number_of_plies") or 1),
@@ -671,7 +677,7 @@ def map_header(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
         name=item.get("zone") or item.get("opening_mark") or "Header",
         system="Wall",
         application="Header",
-        size=item.get("header_size") or "4x12",
+        size=_member_size(item.get("header_size"), "4x12"),
         species=species,
         grade=grade,
         plies=int(item.get("number_of_plies") or 2),
@@ -722,7 +728,7 @@ def map_post(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
         name=item.get("post_mark") or "Post",
         system="Post",
         application="Column",
-        size=item.get("post_size") or "4x4",
+        size=_member_size(item.get("post_size"), "4x4"),
         species=sp,
         grade=gr,
         length_ft=float(item.get("height_ft") or 8),
@@ -785,7 +791,7 @@ def map_pad_footing(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]
     depth_in = float(item.get("depth_in") or 12)
     cover = float(item.get("concrete_cover_in") or 3.0)
 
-    post_size = item.get("post_size") or "4x4"
+    post_size = _member_size(item.get("post_size"), "4x4")
     try:
         parts = post_size.lower().replace("x", " ").split()
         a1 = float(parts[0]) - 0.5
@@ -893,7 +899,7 @@ def map_shear_wall(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
     fastener = "10d" if "10" in nail_size else "8d"
 
     hd_model = item.get("holdown_model") or "HDU2"
-    stud_size = item.get("stud_size") or "2x6"
+    stud_size = _member_size(item.get("stud_size"), "2x6")
     stud_spacing = int(item.get("stud_spacing_in") or 16)
 
     Vs = float(env.get("Vs_lbs", 0))
