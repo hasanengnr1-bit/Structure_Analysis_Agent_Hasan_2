@@ -1,6 +1,5 @@
 import secrets
-import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from sqlalchemy import update, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.concurrency import run_in_threadpool
@@ -24,7 +23,7 @@ async def signup(signup_form: SignupForm, db: AsyncSession = Depends(get_db)):
         existing_user = result.scalar_one_or_none()
 
         if existing_user:
-            raise HTTPException(status_code=400, detail="Username already exists")
+            raise HTTPException(status_code=400, detail="Email already exists")
 
         hashed_password = await run_in_threadpool(hash_password, signup_form.password)
         new_user = User(email=signup_form.email, password=hashed_password, name=signup_form.name)
@@ -33,7 +32,10 @@ async def signup(signup_form: SignupForm, db: AsyncSession = Depends(get_db)):
 
         return {"status_code": 200, "data": "User Created Successfully!"}
 
+    except HTTPException:
+        raise
     except Exception as e:
+        await db.rollback()
         logger.error(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Something Went Wrong!")
 
@@ -76,7 +78,10 @@ async def login(login_form: LoginForm, response: Response, db: AsyncSession = De
             "token_type": "bearer",
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
+        await db.rollback()
         logger.error(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Something Went Wrong!")
 
@@ -112,6 +117,8 @@ async def logout(
         response.delete_cookie("refresh_token")
         return {"status_code": 200, "data": "User logged out Successfully."}
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Something Went Wrong!")
@@ -138,13 +145,17 @@ async def refresh_access_token(request: Request, db: AsyncSession = Depends(get_
             )
 
         # Issue a new Access Token
-        new_access_token = create_access_token(data={"sub": db_token.user_email})
+        new_access_token = create_access_token(
+            data={"sub": db_token.user_email}, expires_delta=timedelta(minutes=30)
+        )
 
         return {
             "status_code": 200,
             "access_token": new_access_token,
             "token_type": "bearer",
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error: {e}")
         raise HTTPException(status_code=500, detail="Something Went Wrong!")

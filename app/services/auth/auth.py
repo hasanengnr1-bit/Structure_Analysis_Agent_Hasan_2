@@ -17,7 +17,7 @@ ALGORITHM = "HS256"
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # OAuth2 scheme for token extraction
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -64,13 +64,13 @@ async def get_current_user(
         
     return user
 
-async def store_refresh_token_in_db(db: AsyncSession, user_id: int, token_string: str) -> None:
+async def store_refresh_token_in_db(db: AsyncSession, user_email: str, token_string: str) -> None:
     """Saves the token to the database with a 30-day expiration."""
     expires_at = datetime.utcnow() + timedelta(days=30) 
     
     db_token = RefreshToken(
         token=token_string,
-        user_id=user_id,
+        user_email=user_email,
         expires_at=expires_at,
         revoked=False
     )

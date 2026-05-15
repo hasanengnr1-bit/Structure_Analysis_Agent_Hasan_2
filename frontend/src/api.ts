@@ -50,6 +50,27 @@ async function readJson<T>(response: Response): Promise<T> {
   }
 }
 
+function getResponseErrorMessage(payload: unknown, fallback: string) {
+  if (!payload || typeof payload !== "object" || !("detail" in payload)) {
+    return fallback;
+  }
+
+  const detail = (payload as { detail?: unknown }).detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (item && typeof item === "object" && "msg" in item) {
+          return String((item as { msg?: unknown }).msg);
+        }
+        return String(item);
+      })
+      .join(", ");
+  }
+  if (detail && typeof detail === "object") return JSON.stringify(detail);
+  return fallback;
+}
+
 async function request<T>(
   apiBase: string,
   path: string,
@@ -59,19 +80,21 @@ async function request<T>(
   const headers = new Headers(init.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${trimTrailingSlash(apiBase)}${path}`, {
-    ...init,
-    headers,
-    credentials: "include",
-  });
+  let response: Response;
+  const base = trimTrailingSlash(apiBase);
+  try {
+    response = await fetch(`${base}${path}`, {
+      ...init,
+      headers,
+      credentials: init.credentials ?? "same-origin",
+    });
+  } catch {
+    throw new ApiError(`Cannot reach API at ${base}. Start the backend or check the API base URL.`, 0);
+  }
 
   const payload = await readJson<ApiEnvelope<T> | T>(response);
   if (!response.ok) {
-    const detail =
-      typeof payload === "object" && payload && "detail" in payload
-        ? String((payload as { detail?: unknown }).detail)
-        : response.statusText;
-    throw new ApiError(detail || "Request failed", response.status);
+    throw new ApiError(getResponseErrorMessage(payload, response.statusText || "Request failed"), response.status);
   }
 
   return payload as T;

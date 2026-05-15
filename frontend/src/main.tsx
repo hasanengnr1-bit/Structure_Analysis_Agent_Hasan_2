@@ -584,8 +584,8 @@ function AuthPanel({
   return (
     <section className="auth-panel">
       <div className="segmented">
-        <button className={mode === "login" ? "active" : ""} onClick={() => onMode("login")}>Login</button>
-        <button className={mode === "signup" ? "active" : ""} onClick={() => onMode("signup")}>Signup</button>
+        <button type="button" className={mode === "login" ? "active" : ""} onClick={() => onMode("login")}>Login</button>
+        <button type="button" className={mode === "signup" ? "active" : ""} onClick={() => onMode("signup")}>Signup</button>
       </div>
       <form onSubmit={onSubmit}>
         {mode === "signup" && (
@@ -602,7 +602,7 @@ function AuthPanel({
           Password
           <input name="password" type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} required />
         </label>
-        <button className="primary-button" disabled={state === "loading"}>
+        <button type="submit" className="primary-button" disabled={state === "loading"}>
           {state === "loading" ? <Loader2 className="spin" size={16} /> : <ArrowRight size={16} />}
           Continue
         </button>

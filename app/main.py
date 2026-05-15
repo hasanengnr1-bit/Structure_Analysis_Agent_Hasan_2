@@ -1,3 +1,5 @@
+import os
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -22,13 +24,22 @@ app.include_router(google_sso.router, prefix="", tags=["Auth"])
 app.include_router(crud.router, prefix="", tags=["CRUD"])
 app.include_router(analysis.router, prefix="", tags=["Analysis"])
 
+frontend_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "FRONTEND_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173",
+    ).split(",")
+    if origin.strip()
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # any origin
+    allow_origins=frontend_origins,
+    allow_origin_regex=os.getenv("FRONTEND_ORIGIN_REGEX", r"https?://(localhost|127\.0\.0\.1)(:\d+)?"),
     allow_credentials=True,
-    allow_methods=["*"],          # any HTTP method
-    allow_headers=["*"],          # any headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 app.add_middleware(SessionMiddleware, secret_key="replace-this-with-a-secure-random-string")
 
