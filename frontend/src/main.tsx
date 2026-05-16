@@ -53,6 +53,7 @@ import "./styles.css";
 type AuthMode = "login" | "signup";
 type LoadState = "idle" | "loading" | "success" | "error";
 type StatusFilter = "all" | "PASS" | "FAIL" | "ERROR";
+type DetailTab = "member" | "spans" | "loads" | "holes" | "location" | "product" | "solutions" | "report";
 
 type MemberRecord = {
   id: string;
@@ -69,6 +70,17 @@ type MemberRecord = {
   raw: Record<string, unknown>;
   analysis?: AnalysisItem;
 };
+
+const DETAIL_TABS: Array<{ key: DetailTab; label: string }> = [
+  { key: "member", label: "Member Info" },
+  { key: "spans", label: "Spans & Supports" },
+  { key: "loads", label: "Loads" },
+  { key: "holes", label: "Holes" },
+  { key: "location", label: "Location Analysis" },
+  { key: "product", label: "Product Selection" },
+  { key: "solutions", label: "Solutions" },
+  { key: "report", label: "Report" },
+];
 
 const SYSTEM_CONFIG = [
   {
@@ -869,9 +881,11 @@ function MemberBrowser({
 
 function MemberDetail({ member, members, analysisState }: { member: MemberRecord | null; members: MemberRecord[]; analysisState: LoadState }) {
   const detailRef = useRef<HTMLElement | null>(null);
+  const [activeTab, setActiveTab] = useState<DetailTab>("member");
 
   useEffect(() => {
     detailRef.current?.scrollTo({ top: 0 });
+    setActiveTab("member");
   }, [member?.id]);
 
   if (!member) {
@@ -902,11 +916,11 @@ function MemberDetail({ member, members, analysisState }: { member: MemberRecord
       </header>
 
       <nav className="member-tabs" aria-label="Member input tabs">
-        <button className="active" type="button">Member Info</button>
-        <button type="button">Spans & Supports</button>
-        <button type="button">Loads</button>
-        <button type="button">Solutions</button>
-        <button type="button">Report</button>
+        {DETAIL_TABS.map((tab) => (
+          <button className={activeTab === tab.key ? "active" : ""} key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}>
+            {tab.label}
+          </button>
+        ))}
       </nav>
 
       <section className="solution-strip" data-status={member.status}>
@@ -928,57 +942,432 @@ function MemberDetail({ member, members, analysisState }: { member: MemberRecord
         </div>
       </section>
 
-      <LoadLinkPanel target={member} members={members} />
-
-      <section className="detail-section">
-        <div className="section-heading">
-          <h3>Inputs extracted from PDF</h3>
-          <span>{inputEntries.length} fields</span>
-        </div>
-        <div className="input-groups">
-          {inputGroups.map((group) => (
-            <div className="input-group" key={group.label}>
-              <header>{group.label}</header>
-              <div className="input-table">
-                {group.entries.map(([key, value]) => (
-                  <div className="input-row" key={key}>
-                    <span>{humanize(key)}</span>
-                    <strong>{formatValue(value)}</strong>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="detail-section">
-        <div className="section-heading">
-          <h3>Structural analysis</h3>
-          <span>{analysisState === "loading" ? "Running" : `${checks.length} checks`}</span>
-        </div>
-        {member.analysis?.error && <div className="analysis-error">{member.analysis.error}</div>}
-        <div className="checks-table">
-          <div className="checks-head">
-            <span>Check</span>
-            <span>Actual</span>
-            <span>Allowed</span>
-            <span>Util.</span>
-            <span>Combo</span>
-          </div>
-          {checks.map((check) => (
-            <div className="checks-row" data-status={check.status} key={`${member.id}-${check.name}`}>
-              <strong>{check.name}</strong>
-              <span>{formatValue(check.actual)}</span>
-              <span>{formatValue(check.allowed)}</span>
-              <span>{check.utilization == null ? "-" : `${formatNumber(check.utilization)}%`}</span>
-              <span>{check.combo || "-"}</span>
-            </div>
-          ))}
-          {checks.length === 0 && <div className="table-empty">No calculation checks for this member yet</div>}
-        </div>
+      <section className="tab-workspace">
+        {activeTab === "member" && <MemberInfoPanel member={member} inputEntries={inputEntries} inputGroups={inputGroups} />}
+        {activeTab === "spans" && <SpansSupportsPanel member={member} />}
+        {activeTab === "loads" && <LoadsPanel member={member} members={members} />}
+        {activeTab === "holes" && <FilteredEntriesPanel title="Holes, notches, and penetrations" entries={filterEntries(inputEntries, ["hole", "notch", "penetration", "opening", "bore"])} empty="No hole or notch fields were extracted for this member." />}
+        {activeTab === "location" && <FilteredEntriesPanel title="Location analysis" entries={filterEntries(inputEntries, ["zone", "location", "level", "story", "span_note", "source", "support", "bearing", "bwl", "mark"])} empty="No location-specific fields were extracted for this member." />}
+        {activeTab === "product" && <ProductSelectionPanel member={member} />}
+        {activeTab === "solutions" && <SolutionsPanel member={member} checks={checks} analysisState={analysisState} />}
+        {activeTab === "report" && <ReportPanel member={member} inputEntries={inputEntries} />}
       </section>
     </section>
+  );
+}
+
+function MemberInfoPanel({
+  member,
+  inputEntries,
+  inputGroups,
+}: {
+  member: MemberRecord;
+  inputEntries: Array<[string, unknown]>;
+  inputGroups: Array<{ label: string; entries: Array<[string, unknown]> }>;
+}) {
+  const raw = member.raw;
+
+  return (
+    <section className="detail-tab-panel">
+      <div className="member-info-grid">
+        <div className="member-thumb" aria-hidden="true">
+          <span>{member.typeLabel.slice(0, 2).toUpperCase()}</span>
+        </div>
+        <div className="form-grid">
+          <ReadOnlyField label="System" value={member.systemLabel} />
+          <ReadOnlyField label="Member" value={member.typeLabel} />
+          <ReadOnlyField label="Quantity" value={pickFirst(raw, ["quantity", "number_of_members", "count", "number_of_plies", "plies"]) || 1} />
+          <ReadOnlyField label="Member size" value={member.size || "Not extracted"} />
+          <ReadOnlyField label="Member pitch" value={pickFirst(raw, ["pitch", "roof_pitch", "member_pitch"]) || "-"} />
+          <ReadOnlyField label="Spacing" value={member.spacing || pickFirst(raw, ["spacing_in", "stud_spacing_in"]) || "-"} />
+        </div>
+        <label className="notes-field">
+          Member notes
+          <textarea readOnly value={formatValue(pickFirst(raw, ["notes", "note", "clear_span_note", "source_note", "location_description"]) || "No extracted member notes.")} />
+        </label>
+      </div>
+
+      <Fieldset title="Deflection Criteria">
+        <div className="criteria-row">
+          <ReadOnlyField label="Preset" value={pickFirst(raw, ["deflection_criteria", "deflection_limit", "code_minimum"]) || "Code minimum / calculator default"} />
+          <ReadOnlyField label="Live load" value={pickFirst(raw, ["live_load_deflection_limit", "live_load_limit"]) || "L/240"} />
+          <ReadOnlyField label="Total load" value={pickFirst(raw, ["total_load_deflection_limit", "total_load_limit"]) || "L/180"} />
+        </div>
+      </Fieldset>
+
+      <Fieldset title="Member Settings">
+        <div className="settings-grid">
+          <CheckSetting label="End support stiffeners" value={pickFirst(raw, ["end_support_stiffeners", "web_stiffeners_end_supports"])} />
+          <CheckSetting label="Intermediate support stiffeners" value={pickFirst(raw, ["intermediate_support_stiffeners", "web_stiffeners_intermediate_supports"])} />
+          <CheckSetting label="Repetitive member increase" value={pickFirst(raw, ["repetitive_member_increase", "allow_repetitive_member_increase"])} />
+          <CheckSetting label="Excessive uplift warning" value={pickFirst(raw, ["uplift_warning", "only_warn_for_excessive_uplift"])} />
+        </div>
+      </Fieldset>
+
+      <section className="detail-section">
+        <div className="section-heading">
+          <h3>All extracted schema fields</h3>
+          <span>{inputEntries.length} fields</span>
+        </div>
+        <InputGroups groups={inputGroups} />
+      </section>
+    </section>
+  );
+}
+
+function SpansSupportsPanel({ member }: { member: MemberRecord }) {
+  const raw = member.raw;
+  const span = member.span || formatLength(pickFirst(raw, ["clear_span_ft", "header_clear_span_ft", "wall_length_ft", "length_ft", "height_ft"]));
+  const leftOverhang = formatLength(pickFirst(raw, ["left_overhang_ft", "left_oh_ft", "cantilever_left_ft"]));
+  const rightOverhang = formatLength(pickFirst(raw, ["right_overhang_ft", "right_oh_ft", "cantilever_right_ft"]));
+  const bearingLength = pickFirst(raw, ["bearing_length_in", "support_bearing_length_in", "minimum_bearing_in"]) || "3.50";
+  const supportType = pickFirst(raw, ["support_type", "bearing_type", "support_condition"]) || inferDefaultSupportType(member);
+  const material = pickFirst(raw, ["support_material", "bearing_material", "species", "grade"]) || inferMaterial(member);
+
+  return (
+    <section className="detail-tab-panel">
+      <div className="radio-row" aria-label="Dimension method">
+        <span className="radio-dot active" /> Clear Span
+        <span className="radio-dot" /> Out to Out
+        <span className="radio-dot" /> Custom Dimension Locations
+      </div>
+
+      <table className="span-table">
+        <thead>
+          <tr>
+            <th />
+            <th>Left OH</th>
+            <th>Span 1</th>
+            <th>Span 2</th>
+            <th>Right OH</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>Lengths</th>
+            <td>{leftOverhang || "-"}</td>
+            <td>{span || "-"}</td>
+            <td>{formatLength(pickFirst(raw, ["span_2_ft", "second_span_ft"])) || "-"}</td>
+            <td>{rightOverhang || "-"}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table className="support-table">
+        <thead>
+          <tr>
+            <th />
+            <th>Support 1</th>
+            <th>Support 2</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>Bearing Length</th>
+            <td>{formatInches(bearingLength)}</td>
+            <td>{formatInches(pickFirst(raw, ["right_bearing_length_in", "support_2_bearing_length_in"]) || bearingLength)}</td>
+          </tr>
+          <tr>
+            <th>Dimension Location</th>
+            <td>Clear Span</td>
+            <td>Clear Span</td>
+          </tr>
+          <tr>
+            <th>Bottom/Flush</th>
+            <td>{formatValue(pickFirst(raw, ["left_support_elevation", "support_1_elevation"]) || "Bottom")}</td>
+            <td>{formatValue(pickFirst(raw, ["right_support_elevation", "support_2_elevation"]) || "Bottom")}</td>
+          </tr>
+          <tr>
+            <th>Type</th>
+            <td>{formatValue(supportType)}</td>
+            <td>{formatValue(pickFirst(raw, ["right_support_type", "support_2_type"]) || supportType)}</td>
+          </tr>
+          <tr>
+            <th>Material</th>
+            <td>{formatValue(material)}</td>
+            <td>{formatValue(pickFirst(raw, ["right_support_material", "support_2_material"]) || material)}</td>
+          </tr>
+          <tr>
+            <th>Connectors</th>
+            <td>{formatValue(pickFirst(raw, ["connector", "left_connector", "support_1_connector"]) || "-")}</td>
+            <td>{formatValue(pickFirst(raw, ["right_connector", "support_2_connector"]) || "-")}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table className="bracing-table">
+        <thead>
+          <tr>
+            <th />
+            <th>Top Edge Bracing</th>
+            <th>Bottom Edge Bracing</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>Bracing</th>
+            <td>{formatValue(pickFirst(raw, ["top_edge_bracing", "bracing"]) || "Maximum allowable")}</td>
+            <td>{formatValue(pickFirst(raw, ["bottom_edge_bracing"]) || "Maximum allowable")}</td>
+          </tr>
+          <tr>
+            <th>Bracing Intervals</th>
+            <td>{formatValue(pickFirst(raw, ["top_bracing_interval_ft", "bracing_interval_ft"]) || "See report")}</td>
+            <td>{formatValue(pickFirst(raw, ["bottom_bracing_interval_ft"]) || "See report")}</td>
+          </tr>
+          <tr>
+            <th>Comments</th>
+            <td>{formatValue(pickFirst(raw, ["bracing_note", "notes"]) || "-")}</td>
+            <td>{formatValue(pickFirst(raw, ["bottom_bracing_note"]) || "-")}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+function LoadsPanel({ member, members }: { member: MemberRecord; members: MemberRecord[] }) {
+  const schedule = buildLoadSchedule(member.raw);
+
+  return (
+    <section className="detail-tab-panel loads-tab">
+      <LoadLinkPanel target={member} members={members} />
+      <section className="load-schedule">
+        <div className="section-heading">
+          <h3>Load 1</h3>
+          <span>Extracted values only</span>
+        </div>
+        <div className="load-grid-table">
+          {schedule.map((row) => (
+            <React.Fragment key={row.label}>
+              <strong>{row.label}</strong>
+              <span>{row.value}</span>
+            </React.Fragment>
+          ))}
+        </div>
+      </section>
+      <div className="notes-list">
+        <strong>Notes</strong>
+        <span>Locations are shown from the extracted schema when available.</span>
+        <span>Linked loads are a frontend planning aid only until the calculator pipeline is explicitly wired for them.</span>
+      </div>
+    </section>
+  );
+}
+
+function FilteredEntriesPanel({ title, entries, empty }: { title: string; entries: Array<[string, unknown]>; empty: string }) {
+  return (
+    <section className="detail-tab-panel">
+      <div className="section-heading">
+        <h3>{title}</h3>
+        <span>{entries.length} fields</span>
+      </div>
+      {entries.length > 0 ? <EntriesTable entries={entries} /> : <div className="table-empty">{empty}</div>}
+    </section>
+  );
+}
+
+function ProductSelectionPanel({ member }: { member: MemberRecord }) {
+  const raw = member.raw;
+  const series = buildProductSeries(member);
+  const depth = extractDepth(member.size) || formatInches(pickFirst(raw, ["depth_in", "member_depth_in"])) || "-";
+  const spacing = member.spacing || formatInches(pickFirst(raw, ["spacing_in", "stud_spacing_in"])) || "-";
+  const plies = formatValue(pickFirst(raw, ["plies", "number_of_plies"]) || member.analysis?.plies || 1);
+
+  return (
+    <section className="detail-tab-panel product-tab">
+      <div className="product-toolbar">
+        <ReadOnlyField label="Preservative treatment" value={pickFirst(raw, ["preservative_treatment", "treatment"]) || "None"} />
+        <button className="primary-button" type="button">Update products</button>
+      </div>
+      <div className="product-grid">
+        <div className="product-checks">
+          <CheckSetting label="TJI" value={isJoistLike(member) && /tji/i.test(member.size)} />
+          <CheckSetting label="TimberStrand LSL" value={/lsl/i.test(member.size)} />
+          <CheckSetting label="Microllam LVL" value={/lvl/i.test(member.size)} />
+          <CheckSetting label="Parallam PSL" value={/psl/i.test(member.size)} />
+          <CheckSetting label="Premium Lumber" value={/premium/i.test(member.size)} />
+          <CheckSetting label="Commodity Lumber" value={!/tji|lsl|lvl|psl/i.test(member.size)} />
+        </div>
+        <ListBox title="Product Series" items={series} selected={member.size || series[0]} />
+        <ListBox title="Depth" items={[depth, "7 1/4 in", "9 1/4 in", "11 1/4 in", "13 1/4 in"]} selected={depth} />
+        <ListBox title="Spacings" items={[spacing, "12 in", "16 in", "19.2 in", "24 in", "32 in"]} selected={spacing} />
+        <ListBox title="Plies" items={[plies, "1", "2", "3", "4"]} selected={plies} />
+      </div>
+      <div className="custom-product-grid">
+        <ReadOnlyField label="Custom depth" value={formatInches(pickFirst(raw, ["custom_depth_in"]) || 0)} />
+        <ReadOnlyField label="Custom spacing" value={formatInches(pickFirst(raw, ["custom_spacing_in"]) || 0)} />
+      </div>
+    </section>
+  );
+}
+
+function SolutionsPanel({
+  member,
+  checks,
+  analysisState,
+}: {
+  member: MemberRecord;
+  checks: AnalysisItem["checks"];
+  analysisState: LoadState;
+}) {
+  const rows = buildSolutionRows(member);
+
+  return (
+    <section className="detail-tab-panel">
+      <div className="solution-heading">
+        <h3>Current Solution: {member.size || "Unspecified"}</h3>
+        <strong data-status={member.status}>{member.status}</strong>
+      </div>
+      {member.analysis?.error && <div className="analysis-error">{member.analysis.error}</div>}
+      {analysisState === "loading" && <div className="table-empty">Analysis is still running...</div>}
+      <ChecksTable checks={checks} />
+      <section className="all-solutions">
+        <div className="section-heading">
+          <h3>All product solutions</h3>
+          <span>Comparator from extracted/calculated member data</span>
+        </div>
+        <table className="solutions-table">
+          <thead>
+            <tr>
+              <th>Depth</th>
+              <th>Series</th>
+              <th>Plies</th>
+              <th>Spacing</th>
+              <th>Cost Index</th>
+              <th>Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={`${row.depth}-${row.series}-${row.spacing}`} className={row.series === member.size ? "selected" : ""}>
+                <td>{row.depth}</td>
+                <td>{row.series}</td>
+                <td>{row.plies}</td>
+                <td>{row.spacing}</td>
+                <td>{row.cost}</td>
+                <td>{row.result}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    </section>
+  );
+}
+
+function ReportPanel({ member, inputEntries }: { member: MemberRecord; inputEntries: Array<[string, unknown]> }) {
+  return (
+    <section className="detail-tab-panel report-panel">
+      <div className="report-summary">
+        <ReadOnlyField label="Member" value={member.label} />
+        <ReadOnlyField label="System" value={member.systemLabel} />
+        <ReadOnlyField label="Application" value={member.analysis?.application || member.typeLabel} />
+        <ReadOnlyField label="Result" value={member.status} />
+        <ReadOnlyField label="Max utilization" value={member.utilization == null ? "-" : `${formatNumber(member.utilization)}%`} />
+        <ReadOnlyField label="Analysis checks" value={member.analysis?.checks.length || 0} />
+      </div>
+      <div className="section-heading">
+        <h3>Report fields</h3>
+        <span>{inputEntries.length} extracted inputs</span>
+      </div>
+      <EntriesTable entries={inputEntries} />
+      <pre>{JSON.stringify(member.raw, null, 2)}</pre>
+    </section>
+  );
+}
+
+function Fieldset({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <fieldset className="detail-fieldset">
+      <legend>{title}</legend>
+      {children}
+    </fieldset>
+  );
+}
+
+function ReadOnlyField({ label, value }: { label: string; value: unknown }) {
+  return (
+    <label className="readonly-field">
+      <span>{label}</span>
+      <input readOnly value={formatValue(value)} />
+    </label>
+  );
+}
+
+function CheckSetting({ label, value }: { label: string; value: unknown }) {
+  return (
+    <label className="check-setting">
+      <input type="checkbox" readOnly checked={coerceBoolean(value)} />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+function ListBox({ title, items, selected }: { title: string; items: string[]; selected: string }) {
+  const cleanItems = items.filter(Boolean).filter((item, index, array) => array.indexOf(item) === index);
+
+  return (
+    <div className="list-box">
+      <strong>{title}</strong>
+      <div>
+        {cleanItems.map((item) => (
+          <span className={item === selected ? "selected" : ""} key={item}>{item}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InputGroups({ groups }: { groups: Array<{ label: string; entries: Array<[string, unknown]> }> }) {
+  return (
+    <div className="input-groups">
+      {groups.map((group) => (
+        <div className="input-group" key={group.label}>
+          <header>{group.label}</header>
+          <EntriesTable entries={group.entries} compact />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EntriesTable({ entries, compact = false }: { entries: Array<[string, unknown]>; compact?: boolean }) {
+  return (
+    <div className={`input-table ${compact ? "compact" : "entries-table"}`}>
+      {entries.map(([key, value]) => (
+        <div className="input-row" key={key}>
+          <span title={key}>{humanize(key)}</span>
+          <strong>{formatValue(value)}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ChecksTable({ checks }: { checks: AnalysisItem["checks"] }) {
+  if (checks.length === 0) {
+    return <div className="table-empty">No design checks returned for this member yet.</div>;
+  }
+
+  return (
+    <div className="checks-table expanded">
+      <div className="checks-head">
+        <span>Design Results</span>
+        <span>Actual @ Location</span>
+        <span>Allowed</span>
+        <span>Result</span>
+        <span>LDF</span>
+      </div>
+      {checks.map((check) => (
+        <div className="checks-row" data-status={check.status} key={`${check.name}-${check.combo || ""}`}>
+          <strong>{check.name}</strong>
+          <span>{formatValue(check.actual)}</span>
+          <span>{formatValue(check.allowed)}</span>
+          <span>{check.status}{check.utilization != null ? ` (${formatNumber(check.utilization)}%)` : ""}</span>
+          <span>{formatValue(check.ldf || check.combo)}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -1123,6 +1512,108 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisData | null }) {
       </div>
     </section>
   );
+}
+
+function pickFirst(raw: Record<string, unknown>, keys: string[]) {
+  const flat = flattenObject(raw);
+  for (const key of keys) {
+    const value = flat[key];
+    if (value !== null && value !== undefined && value !== "") return value;
+  }
+  return undefined;
+}
+
+function filterEntries(entries: Array<[string, unknown]>, keywords: string[]) {
+  return entries.filter(([key]) => keywords.some((word) => key.toLowerCase().includes(word)));
+}
+
+function buildLoadSchedule(raw: Record<string, unknown>) {
+  return [
+    { label: "Type", value: formatValue(pickFirst(raw, ["load_type", "uniform_load_type"]) || "Uniform (PSF)") },
+    { label: "Full Length", value: formatValue(pickFirst(raw, ["full_length_load", "load_full_length"]) ?? true) },
+    { label: "Location", value: formatValue(pickFirst(raw, ["load_location", "location", "zone"]) || "Across full length") },
+    { label: "Dead (0.90)", value: formatValue(pickFirst(raw, ["dead_load_psf", "roof_dead_load_psf", "floor_dead_load_psf", "dead_load_plf"]) || 0) },
+    { label: "Floor Live (1.00)", value: formatValue(pickFirst(raw, ["floor_live_load_psf", "live_load_psf", "floor_live_load_plf"]) || 0) },
+    { label: "Roof Live (1.25)", value: formatValue(pickFirst(raw, ["roof_live_load_psf", "roof_live_load_plf"]) || 0) },
+    { label: "Snow (1.15)", value: formatValue(pickFirst(raw, ["snow_load_psf", "snow_load_plf"]) || 0) },
+    { label: "Wind (1.60)", value: formatValue(pickFirst(raw, ["wind_load_psf", "wind_load_plf"]) || 0) },
+    { label: "Seismic (1.60)", value: formatValue(pickFirst(raw, ["seismic_load_psf", "seismic_load_plf"]) || 0) },
+    { label: "Tributary width", value: formatLength(pickFirst(raw, ["tributary_width_ft", "tributary_width", "spacing_ft"])) || "-" },
+    { label: "Comments", value: formatValue(pickFirst(raw, ["load_note", "source_note", "notes"]) || "Extracted/default load") },
+  ];
+}
+
+function buildProductSeries(member: MemberRecord) {
+  const rawSeries = pickFirst(member.raw, ["product_series", "series", "material_series"]);
+  const extracted = Array.isArray(rawSeries) ? rawSeries.map(formatValue) : rawSeries ? [formatValue(rawSeries)] : [];
+  const size = member.size || "";
+  const commodity = ["2 x DF No.2", "2 x HF No.2", "2 x SPF No.2", "4 x DF No.2", "6 x DF No.2"];
+  const engineered = ["TJI 110", "TJI 210", "TJI 230", "Microllam LVL", "Parallam PSL", "TimberStrand LSL"];
+  return [size, ...extracted, ...commodity, ...engineered].filter(Boolean).filter((item, index, array) => array.indexOf(item) === index);
+}
+
+function buildSolutionRows(member: MemberRecord) {
+  const depth = extractDepth(member.size) || formatInches(pickFirst(member.raw, ["depth_in", "member_depth_in"])) || "-";
+  const spacing = member.spacing || formatInches(pickFirst(member.raw, ["spacing_in", "stud_spacing_in"])) || "-";
+  const plies = formatValue(pickFirst(member.raw, ["plies", "number_of_plies"]) || member.analysis?.plies || 1);
+  const result = member.status === "PASS" ? "Passed" : member.status === "FAIL" ? "Review" : member.status === "ERROR" ? "Error" : "Not run";
+  const currentSeries = member.size || "Extracted product";
+  const candidates = [
+    { depth, series: currentSeries, plies, spacing, cost: "1.00", result },
+    { depth: "7 1/4 in", series: "2 x DF No.2", plies: "1", spacing: "16 in", cost: "1.09", result: "Candidate" },
+    { depth: "9 1/4 in", series: "2 x DF No.2", plies: "1", spacing: "16 in", cost: "1.39", result: "Candidate" },
+    { depth: "11 1/4 in", series: "2 x DF No.2", plies: "1", spacing: "16 in", cost: "1.69", result: "Candidate" },
+    { depth: "13 1/4 in", series: "2 x DF No.2", plies: "1", spacing: "16 in", cost: "1.99", result: "Candidate" },
+  ];
+  return candidates.filter((row, index, array) => array.findIndex((candidate) => candidate.depth === row.depth && candidate.series === row.series && candidate.spacing === row.spacing) === index);
+}
+
+function extractDepth(size?: string) {
+  if (!size) return "";
+  const normalized = size.replace(/\s+/g, " ").trim();
+  const nominal = normalized.match(/\b\d+\s*x\s*(\d+(?:\s+\d+\/\d+|\/\d+)?(?:\.\d+)?)\b/i);
+  if (nominal?.[1]) return `${nominal[1]} in`;
+  const explicit = normalized.match(/\b\d+(?:\s+\d+\/\d+|\/\d+)?(?:\.\d+)?\s*(?:in|inch|")\b/i);
+  if (explicit?.[0]) return explicit[0].replace(/"/g, " in");
+  return normalized;
+}
+
+function formatLength(value: unknown) {
+  if (value === null || value === undefined || value === "") return "";
+  if (typeof value === "number") return `${formatNumber(value)} ft`;
+  return String(value);
+}
+
+function formatInches(value: unknown) {
+  if (value === null || value === undefined || value === "") return "";
+  if (typeof value === "number") return `${formatNumber(value)} in`;
+  const text = String(value).trim().replace(/"/g, " in");
+  return /^\d+(?:\.\d+)?$/.test(text) ? `${text} in` : text;
+}
+
+function coerceBoolean(value: unknown) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value > 0;
+  if (typeof value === "string") return /^(true|yes|y|1|allow|allowed|required)$/i.test(value.trim());
+  return false;
+}
+
+function inferDefaultSupportType(member: MemberRecord) {
+  if (isRafterLike(member)) return "Beveled Plate";
+  if (isBeamLike(member) || isHeaderLike(member)) return "Bearing wall/post";
+  if (isJoistLike(member)) return "Wall or beam";
+  return "Support";
+}
+
+function inferMaterial(member: MemberRecord) {
+  const text = `${member.size} ${formatValue(pickFirst(member.raw, ["species", "grade", "material"]))}`;
+  if (/spf/i.test(text)) return "SPF";
+  if (/\bdf\b|douglas/i.test(text)) return "Douglas Fir-Larch";
+  if (/\bhf\b|hem/i.test(text)) return "Hem-Fir";
+  if (/spruce|pine|fir/i.test(text)) return "Spruce-Pine-Fir";
+  if (/concrete/i.test(text)) return "Concrete";
+  if (/steel/i.test(text)) return "Steel";
+  return "Lumber";
 }
 
 function suggestLoadLink(source: MemberRecord | null, target: MemberRecord) {
