@@ -17,6 +17,7 @@ import {
   Gauge,
   Grid3X3,
   Layers3,
+  Link2,
   Loader2,
   LogOut,
   PanelLeft,
@@ -771,7 +772,7 @@ function Workbench({
         onMemberSearch={onMemberSearch}
         onSelectMember={onSelectMember}
       />
-      <MemberDetail key={selectedMember?.id || "empty"} member={selectedMember} analysisState={analysisState} />
+      <MemberDetail key={selectedMember?.id || "empty"} member={selectedMember} members={members} analysisState={analysisState} />
       <aside className="right-rail">
         <MiniVisualizer visualization={visualization} selectedMember={selectedMember} />
         <AnalysisSummary analysis={analysis} />
@@ -866,7 +867,7 @@ function MemberBrowser({
   );
 }
 
-function MemberDetail({ member, analysisState }: { member: MemberRecord | null; analysisState: LoadState }) {
+function MemberDetail({ member, members, analysisState }: { member: MemberRecord | null; members: MemberRecord[]; analysisState: LoadState }) {
   const detailRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -927,6 +928,8 @@ function MemberDetail({ member, analysisState }: { member: MemberRecord | null; 
         </div>
       </section>
 
+      <LoadLinkPanel target={member} members={members} />
+
       <section className="detail-section">
         <div className="section-heading">
           <h3>Inputs extracted from PDF</h3>
@@ -975,6 +978,90 @@ function MemberDetail({ member, analysisState }: { member: MemberRecord | null; 
           {checks.length === 0 && <div className="table-empty">No calculation checks for this member yet</div>}
         </div>
       </section>
+    </section>
+  );
+}
+
+function LoadLinkPanel({ target, members }: { target: MemberRecord; members: MemberRecord[] }) {
+  const sourceMembers = members.filter((member) => member.id !== target.id);
+  const [sourceId, setSourceId] = useState(sourceMembers[0]?.id || "");
+  const source = sourceMembers.find((member) => member.id === sourceId) || sourceMembers[0] || null;
+  const suggested = useMemo(() => suggestLoadLink(source, target), [source, target]);
+  const [loadType, setLoadType] = useState(suggested.kind);
+  const [magnitude, setMagnitude] = useState(String(suggested.magnitude));
+  const [appliedLinks, setAppliedLinks] = useState<Array<{ id: string; source: string; kind: string; magnitude: string; units: string }>>([]);
+
+  useEffect(() => {
+    const nextSource = sourceMembers[0]?.id || "";
+    setSourceId((current) => (current && sourceMembers.some((member) => member.id === current) ? current : nextSource));
+  }, [target.id, members.length]);
+
+  useEffect(() => {
+    setLoadType(suggested.kind);
+    setMagnitude(String(suggested.magnitude));
+  }, [suggested.kind, suggested.magnitude]);
+
+  const units = loadType === "POINT" ? "lb" : loadType;
+
+  function applyLink() {
+    if (!source) return;
+    setAppliedLinks((current) => [
+      {
+        id: `${source.id}-${target.id}-${Date.now()}`,
+        source: source.label,
+        kind: loadType,
+        magnitude,
+        units,
+      },
+      ...current,
+    ]);
+  }
+
+  return (
+    <section className="load-link-panel">
+      <div className="section-heading">
+        <h3><Link2 size={14} /> Linked loads</h3>
+        <span>{suggested.basis}</span>
+      </div>
+      <div className="load-link-grid">
+        <label>
+          From member
+          <select value={source?.id || ""} onChange={(event) => setSourceId(event.target.value)}>
+            {sourceMembers.map((member) => (
+              <option key={member.id} value={member.id}>{member.label} / {member.typeLabel}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Transfer as
+          <select value={loadType} onChange={(event) => setLoadType(event.target.value as "PSF" | "PLF" | "POINT")}>
+            <option value="PSF">Area load (PSF)</option>
+            <option value="PLF">Line load (PLF)</option>
+            <option value="POINT">Point load</option>
+          </select>
+        </label>
+        <label>
+          Magnitude
+          <input value={magnitude} onChange={(event) => setMagnitude(event.target.value)} />
+        </label>
+        <button className="primary-button" type="button" onClick={applyLink} disabled={!source}>
+          Link load
+        </button>
+      </div>
+      <div className="load-link-preview">
+        <strong>{source?.label || "No source member"}</strong>
+        <span>feeds {target.label} as {magnitude || "-"} {units}</span>
+      </div>
+      {appliedLinks.length > 0 && (
+        <div className="applied-loads">
+          {appliedLinks.map((link) => (
+            <div key={link.id}>
+              <span>{link.source}</span>
+              <strong>{link.magnitude} {link.units}</strong>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -1036,6 +1123,111 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisData | null }) {
       </div>
     </section>
   );
+}
+
+function suggestLoadLink(source: MemberRecord | null, target: MemberRecord) {
+  const kind = inferLoadKind(source, target);
+  const psf = source ? extractPsf(source.raw) : 40;
+  const width = source ? extractTributaryWidth(source.raw) : 1;
+  const span = source ? extractSpanFt(source.raw) : 1;
+
+  if (kind === "PSF") {
+    return {
+      kind,
+      magnitude: formatNumberForInput(psf || 40),
+      basis: "Area load from sheathing or tributary surface",
+    };
+  }
+
+  const plf = (psf || 40) * Math.max(width || 1, 1);
+  if (kind === "POINT") {
+    return {
+      kind,
+      magnitude: formatNumberForInput((plf * Math.max(span || 1, 1)) / 2),
+      basis: "Reaction transfer to support",
+    };
+  }
+
+  return {
+    kind,
+    magnitude: formatNumberForInput(plf),
+    basis: "Tributary area converted to line load",
+  };
+}
+
+function inferLoadKind(source: MemberRecord | null, target: MemberRecord): "PSF" | "PLF" | "POINT" {
+  if (!source) return "PLF";
+  if (isPostLike(target) || isPadFooting(target)) return "POINT";
+  if (isBeamLike(source) && (isPostLike(target) || isFootingLike(target))) return "POINT";
+  if (isAreaLike(source) && (isJoistLike(target) || isRafterLike(target))) return "PSF";
+  if (isJoistLike(source) || isRafterLike(source) || isWallLike(source) || isBeamLike(target) || isHeaderLike(target) || isFootingLike(target)) return "PLF";
+  return "PLF";
+}
+
+function isAreaLike(member: MemberRecord) {
+  return /roof|floor|diaphragm|slab/.test(`${member.systemLabel} ${member.typeLabel}`.toLowerCase());
+}
+
+function isJoistLike(member: MemberRecord) {
+  return /joist/.test(member.typeLabel.toLowerCase());
+}
+
+function isRafterLike(member: MemberRecord) {
+  return /rafter/.test(member.typeLabel.toLowerCase());
+}
+
+function isBeamLike(member: MemberRecord) {
+  return /beam|girder|header|ridge|valley/.test(member.typeLabel.toLowerCase());
+}
+
+function isHeaderLike(member: MemberRecord) {
+  return /header/.test(member.typeLabel.toLowerCase());
+}
+
+function isWallLike(member: MemberRecord) {
+  return /wall|stud|plate/.test(member.typeLabel.toLowerCase());
+}
+
+function isPostLike(member: MemberRecord) {
+  return /post|column/.test(member.typeLabel.toLowerCase());
+}
+
+function isFootingLike(member: MemberRecord) {
+  return /footing|foundation|grade beam/.test(`${member.systemLabel} ${member.typeLabel}`.toLowerCase());
+}
+
+function isPadFooting(member: MemberRecord) {
+  return /pad footing/.test(member.typeLabel.toLowerCase());
+}
+
+function extractPsf(raw: Record<string, unknown>) {
+  const values = [
+    raw.roof_dead_load_psf,
+    raw.roof_live_load_psf,
+    raw.floor_live_load_psf,
+    raw.dead_load_psf,
+    raw.live_load_psf,
+    raw.snow_load_psf,
+  ].filter((value): value is number => typeof value === "number");
+  return values.reduce((sum, value) => sum + value, 0);
+}
+
+function extractTributaryWidth(raw: Record<string, unknown>) {
+  const width = [raw.tributary_width_ft, raw.tributary_width, raw.spacing_ft].find((value): value is number => typeof value === "number");
+  if (width) return width;
+  if (typeof raw.spacing_in === "number") return raw.spacing_in / 12;
+  if (typeof raw.stud_spacing_in === "number") return raw.stud_spacing_in / 12;
+  return 1;
+}
+
+function extractSpanFt(raw: Record<string, unknown>) {
+  const span = [raw.clear_span_ft, raw.header_clear_span_ft, raw.wall_length_ft, raw.length_ft, raw.height_ft].find((value): value is number => typeof value === "number");
+  return span || 1;
+}
+
+function formatNumberForInput(value: number) {
+  if (!Number.isFinite(value)) return "0";
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 function groupInputEntries(entries: Array<[string, unknown]>) {

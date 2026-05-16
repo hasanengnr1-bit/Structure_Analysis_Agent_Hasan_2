@@ -10,7 +10,7 @@ from database import User, get_db, RefreshToken
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Configuration constants
-SECRET_KEY = os.environ['ENCRYPTION_SECRET_KEY']
+SECRET_KEY = os.getenv("ENCRYPTION_SECRET_KEY", "local-dev-secret-change-me")
 ALGORITHM = "HS256"
 
 # Password hashing configuration

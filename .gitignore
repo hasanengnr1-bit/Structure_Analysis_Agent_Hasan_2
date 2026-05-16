@@ -3,6 +3,10 @@
 .vscode/
 
 __pycache__/
+*.pyc
+backend*.log
+structure_agent_local.db
+app/structure_agent_local.db
 
 
 frontend/node_modules/

@@ -60,6 +60,15 @@ async def login(login_form: LoginForm, response: Response, db: AsyncSession = De
             data={"sub": user.email}, expires_delta=timedelta(minutes=30)
         )
         refresh_token = secrets.token_urlsafe(64)
+        db.add(
+            RefreshToken(
+                token=refresh_token,
+                user_email=user.email,
+                expires_at=datetime.utcnow() + timedelta(days=30),
+                revoked=False,
+            )
+        )
+        await db.commit()
 
         cookie_max_age = 30 * 24 * 60 * 60
         response.set_cookie(

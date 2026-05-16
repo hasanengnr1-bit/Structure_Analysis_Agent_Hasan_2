@@ -9,20 +9,42 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from services.utils import get_logger
-from routes.crud import crud
-from routes.agent import agent_routes
-from routes.analysis import analysis
-from routes.auth import google_sso, local_auth
+from database import init_db
+from routes.auth import local_auth
 
 
 logger = get_logger(__name__)
 app = FastAPI()
 
-app.include_router(agent_routes.router, prefix="", tags=["Agent"])
 app.include_router(local_auth.router, prefix="", tags=["Auth"])
-app.include_router(google_sso.router, prefix="", tags=["Auth"])
-app.include_router(crud.router, prefix="", tags=["CRUD"])
-app.include_router(analysis.router, prefix="", tags=["Analysis"])
+
+try:
+    from routes.auth import google_sso
+
+    app.include_router(google_sso.router, prefix="", tags=["Auth"])
+except Exception as e:
+    logger.warning(f"Google SSO routes disabled: {e}")
+
+try:
+    from routes.crud import crud
+
+    app.include_router(crud.router, prefix="", tags=["CRUD"])
+except Exception as e:
+    logger.warning(f"CRUD routes disabled: {e}")
+
+try:
+    from routes.analysis import analysis
+
+    app.include_router(analysis.router, prefix="", tags=["Analysis"])
+except Exception as e:
+    logger.warning(f"Analysis routes disabled: {e}")
+
+try:
+    from routes.agent import agent_routes
+
+    app.include_router(agent_routes.router, prefix="", tags=["Agent"])
+except Exception as e:
+    logger.warning(f"Agent routes disabled: {e}")
 
 frontend_origins = [
     origin.strip()
@@ -42,6 +64,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(SessionMiddleware, secret_key="replace-this-with-a-secure-random-string")
+
+@app.on_event("startup")
+async def startup():
+    await init_db()
 
 @app.get("/health")
 async def health():
