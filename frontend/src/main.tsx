@@ -459,68 +459,70 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
-      <aside className="sidebar" aria-label="Workspace">
+    <main className="design-shell">
+      <header className="app-header">
         <Brand />
+        <div className="project-title">
+          <p className="eyebrow">Structural extraction review</p>
+          <h1>{activeProject?.filename || "Structure Analysis Agent"}</h1>
+        </div>
+        <div className="status-pill" data-state={uploadState}>
+          {uploadState === "loading" ? <Loader2 className="spin" size={16} /> : <Activity size={16} />}
+          <span>{taskMessage || status}</span>
+        </div>
+      </header>
+
+      <section className="control-bar">
         <ConnectionPanel apiBase={apiBase} backendState={backendState} onApiBase={setApiBase} />
-        {token ? (
-          <ProjectRail
-            projects={projectMatches}
-            state={projectsState}
-            activeProject={activeProject}
-            search={projectSearch}
-            onSearch={setProjectSearch}
-            onRefresh={loadProjects}
-            onOpen={openProject}
-            onDelete={handleDeleteProject}
-          />
-        ) : (
-          <AuthPanel mode={authMode} state={authState} onMode={setAuthMode} onSubmit={handleAuth} />
-        )}
-        <button className="ghost-button" onClick={token ? signOut : loadDemo}>
-          {token ? <LogOut size={16} /> : <Eye size={16} />}
-          {token ? "Sign out" : "Demo"}
+        <UploadPanel disabled={!token} state={uploadState} onUpload={handleUpload} />
+        <button className="toolbar-button" type="button" onClick={loadDemo}>
+          <Eye size={16} />
+          Demo
         </button>
-      </aside>
-
-      <section className="workspace">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Member workbench</p>
-            <h1>{activeProject?.filename || "Structure Analysis Agent"}</h1>
-          </div>
-          <div className="status-pill" data-state={uploadState}>
-            {uploadState === "loading" ? <Loader2 className="spin" size={16} /> : <Activity size={16} />}
-            <span>{taskMessage || status}</span>
-          </div>
-        </header>
-
-        <section className="command-strip">
-          <UploadPanel disabled={!token} state={uploadState} onUpload={handleUpload} />
-          <Metric label="Members" value={members.length} icon={PanelLeft} />
-          <Metric label="Checks" value={analysis?.summary.total_items || 0} icon={BadgeCheck} />
-          <Metric label="Failing" value={analysis?.summary.failing || 0} icon={AlertCircle} />
-          <Metric label="Errors" value={analysis?.summary.errors || 0} icon={Gauge} />
-        </section>
-
-        <Workbench
-          members={members}
-          filteredMembers={filteredMembers}
-          selectedMember={selectedMember}
-          visualization={visualization}
-          extraction={extraction}
-          analysis={analysis}
-          analysisState={analysisState}
-          activeSystem={activeSystem}
-          statusFilter={statusFilter}
-          memberSearch={memberSearch}
-          onActiveSystem={setActiveSystem}
-          onStatusFilter={setStatusFilter}
-          onMemberSearch={setMemberSearch}
-          onSelectMember={setSelectedMemberId}
-          onLoadDemo={loadDemo}
-        />
+        {token ? (
+          <button className="toolbar-button" type="button" onClick={signOut}>
+            <LogOut size={16} />
+            Sign out
+          </button>
+        ) : null}
+        <Metric label="Members" value={members.length} icon={PanelLeft} />
+        <Metric label="Checks" value={analysis?.summary.total_items || 0} icon={BadgeCheck} />
+        <Metric label="Failing" value={analysis?.summary.failing || 0} icon={AlertCircle} />
+        <Metric label="Errors" value={analysis?.summary.errors || 0} icon={Gauge} />
       </section>
+
+      {token ? (
+        <ProjectRail
+          projects={projectMatches}
+          state={projectsState}
+          activeProject={activeProject}
+          search={projectSearch}
+          onSearch={setProjectSearch}
+          onRefresh={loadProjects}
+          onOpen={openProject}
+          onDelete={handleDeleteProject}
+        />
+      ) : (
+        <AuthPanel mode={authMode} state={authState} onMode={setAuthMode} onSubmit={handleAuth} />
+      )}
+
+      <Workbench
+        members={members}
+        filteredMembers={filteredMembers}
+        selectedMember={selectedMember}
+        visualization={visualization}
+        extraction={extraction}
+        analysis={analysis}
+        analysisState={analysisState}
+        activeSystem={activeSystem}
+        statusFilter={statusFilter}
+        memberSearch={memberSearch}
+        onActiveSystem={setActiveSystem}
+        onStatusFilter={setStatusFilter}
+        onMemberSearch={setMemberSearch}
+        onSelectMember={setSelectedMemberId}
+        onLoadDemo={loadDemo}
+      />
     </main>
   );
 }
@@ -533,7 +535,7 @@ function Brand() {
       </div>
       <div>
         <strong>Strata</strong>
-        <span>Structure AI</span>
+        <span>Design desk</span>
       </div>
     </div>
   );
@@ -550,7 +552,7 @@ function ConnectionPanel({
 }) {
   return (
     <div className="connection-panel">
-      <label htmlFor="api-base">API base</label>
+      <label htmlFor="api-base">API</label>
       <div className="api-row">
         <input
           id="api-base"
@@ -633,7 +635,7 @@ function ProjectRail({
   return (
     <section className="project-rail">
       <div className="rail-heading">
-        <span>Projects</span>
+        <span>File manager</span>
         <button className="icon-button" onClick={onRefresh} aria-label="Refresh projects">
           <RefreshCw size={15} className={state === "loading" ? "spin" : ""} />
         </button>
@@ -669,10 +671,10 @@ function UploadPanel({ disabled, state, onUpload }: { disabled: boolean; state: 
   return (
     <section className={`upload-tool ${disabled ? "disabled" : ""}`}>
       <input ref={inputRef} type="file" accept="application/pdf,.pdf" onChange={(event) => event.target.files?.[0] && onUpload(event.target.files[0])} />
-      <button className="upload-action" disabled={disabled || state === "loading"} onClick={() => inputRef.current?.click()}>
+      <button className="upload-action" type="button" disabled={disabled || state === "loading"} onClick={() => inputRef.current?.click()}>
         {state === "loading" ? <Loader2 className="spin" size={22} /> : <UploadCloud size={22} />}
         <span>
-          <strong>Plan PDF</strong>
+          <strong>Extract PDF</strong>
           <small>{disabled ? "Login required" : "Extract + analyze"}</small>
         </span>
       </button>
@@ -725,20 +727,38 @@ function Workbench({
 }) {
   if (!extraction) {
     return (
-      <section className="empty-state">
-        <Building2 size={26} />
-        <h2>No extraction loaded</h2>
-        <p>Upload a structural PDF or open the demo workspace to review extracted members and analysis inputs.</p>
-        <button className="primary-button" onClick={onLoadDemo}>
-          <Eye size={16} />
-          Open demo
-        </button>
+      <section className="design-grid">
+        <MemberBrowser
+          members={members}
+          filteredMembers={filteredMembers}
+          selectedMember={selectedMember}
+          activeSystem={activeSystem}
+          statusFilter={statusFilter}
+          memberSearch={memberSearch}
+          onActiveSystem={onActiveSystem}
+          onStatusFilter={onStatusFilter}
+          onMemberSearch={onMemberSearch}
+          onSelectMember={onSelectMember}
+        />
+        <section className="member-detail empty-detail">
+          <Building2 size={28} />
+          <h2>No extraction loaded</h2>
+          <p>Open the demo or upload a structural PDF to populate the job tree, member inputs, design checks, and graphic.</p>
+          <button className="primary-button" type="button" onClick={onLoadDemo}>
+            <Eye size={16} />
+            Open demo
+          </button>
+        </section>
+        <aside className="right-rail">
+          <MiniVisualizer visualization={visualization} selectedMember={selectedMember} />
+          <AnalysisSummary analysis={analysis} />
+        </aside>
       </section>
     );
   }
 
   return (
-    <section className="workbench-grid">
+    <section className="design-grid">
       <MemberBrowser
         members={members}
         filteredMembers={filteredMembers}
@@ -751,7 +771,7 @@ function Workbench({
         onMemberSearch={onMemberSearch}
         onSelectMember={onSelectMember}
       />
-      <MemberDetail member={selectedMember} analysisState={analysisState} />
+      <MemberDetail key={selectedMember?.id || "empty"} member={selectedMember} analysisState={analysisState} />
       <aside className="right-rail">
         <MiniVisualizer visualization={visualization} selectedMember={selectedMember} />
         <AnalysisSummary analysis={analysis} />
@@ -783,14 +803,19 @@ function MemberBrowser({
   onMemberSearch: (value: string) => void;
   onSelectMember: (id: string) => void;
 }) {
+  const groupedMembers = SYSTEM_CONFIG.map((system) => ({
+    ...system,
+    members: filteredMembers.filter((member) => member.systemKey === system.key),
+  })).filter((system) => system.members.length > 0 || activeSystem === system.key);
+
   return (
     <section className="member-browser">
       <div className="panel-title">
         <div>
-          <p className="eyebrow">Extracted members</p>
-          <h2>{filteredMembers.length} of {members.length}</h2>
+          <p className="eyebrow">Job tree</p>
+          <h2>Members</h2>
         </div>
-        <SlidersHorizontal size={18} />
+        <span className="count-chip">{filteredMembers.length} / {members.length}</span>
       </div>
       <label className="searchbox">
         <Search size={15} />
@@ -811,19 +836,29 @@ function MemberBrowser({
         </select>
       </div>
       <div className="member-list">
-        {filteredMembers.map((member) => (
-          <button
-            key={member.id}
-            className={`member-row ${selectedMember?.id === member.id ? "active" : ""}`}
-            onClick={() => onSelectMember(member.id)}
-          >
-            <span className="status-bar" data-status={member.status} />
-            <span>
-              <strong>{member.label}</strong>
-              <small>{member.systemLabel} / {member.typeLabel}</small>
-            </span>
-            <span className="member-size">{member.size || "-"}</span>
-          </button>
+        {groupedMembers.map((system) => (
+          <div className="tree-system" key={system.key}>
+            <div className="tree-system-header">
+              <system.icon size={14} />
+              <span>{system.label}</span>
+              <strong>{system.members.length}</strong>
+            </div>
+            {system.members.map((member) => (
+              <button
+                key={member.id}
+                className={`member-row ${selectedMember?.id === member.id ? "active" : ""}`}
+                type="button"
+                onClick={() => onSelectMember(member.id)}
+              >
+                <span className="status-bar" data-status={member.status} />
+                <span>
+                  <strong>{member.label}</strong>
+                  <small>{member.typeLabel}</small>
+                </span>
+                <span className="member-size">{member.size || "-"}</span>
+              </button>
+            ))}
+          </div>
         ))}
         {filteredMembers.length === 0 && <div className="table-empty">No members match the filters</div>}
       </div>
@@ -832,9 +867,15 @@ function MemberBrowser({
 }
 
 function MemberDetail({ member, analysisState }: { member: MemberRecord | null; analysisState: LoadState }) {
+  const detailRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    detailRef.current?.scrollTo({ top: 0 });
+  }, [member?.id]);
+
   if (!member) {
     return (
-      <section className="member-detail empty-detail">
+      <section className="member-detail empty-detail" ref={detailRef}>
         <PanelLeft size={22} />
         <h2>Select a member</h2>
       </section>
@@ -842,10 +883,11 @@ function MemberDetail({ member, analysisState }: { member: MemberRecord | null; 
   }
 
   const inputEntries = Object.entries(flattenObject(member.raw)).filter(([, value]) => value !== "" && value !== null && value !== undefined);
+  const inputGroups = groupInputEntries(inputEntries);
   const checks = member.analysis?.checks || [];
 
   return (
-    <section className="member-detail">
+    <section className="member-detail" ref={detailRef}>
       <header className="detail-header">
         <div>
           <span className="status-badge" data-status={member.status}>{member.status}</span>
@@ -858,16 +900,50 @@ function MemberDetail({ member, analysisState }: { member: MemberRecord | null; 
         </div>
       </header>
 
+      <nav className="member-tabs" aria-label="Member input tabs">
+        <button className="active" type="button">Member Info</button>
+        <button type="button">Spans & Supports</button>
+        <button type="button">Loads</button>
+        <button type="button">Solutions</button>
+        <button type="button">Report</button>
+      </nav>
+
+      <section className="solution-strip" data-status={member.status}>
+        <div>
+          <span>Selected design</span>
+          <strong>{member.size || "Unspecified"}</strong>
+        </div>
+        <div>
+          <span>Result</span>
+          <strong>{member.status}</strong>
+        </div>
+        <div>
+          <span>Span</span>
+          <strong>{member.span || "-"}</strong>
+        </div>
+        <div>
+          <span>Spacing</span>
+          <strong>{member.spacing || "-"}</strong>
+        </div>
+      </section>
+
       <section className="detail-section">
         <div className="section-heading">
           <h3>Inputs extracted from PDF</h3>
           <span>{inputEntries.length} fields</span>
         </div>
-        <div className="input-grid">
-          {inputEntries.map(([key, value]) => (
-            <div className="input-cell" key={key}>
-              <label>{humanize(key)}</label>
-              <strong>{formatValue(value)}</strong>
+        <div className="input-groups">
+          {inputGroups.map((group) => (
+            <div className="input-group" key={group.label}>
+              <header>{group.label}</header>
+              <div className="input-table">
+                {group.entries.map(([key, value]) => (
+                  <div className="input-row" key={key}>
+                    <span>{humanize(key)}</span>
+                    <strong>{formatValue(value)}</strong>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -908,30 +984,33 @@ function MiniVisualizer({ visualization, selectedMember }: { visualization: Visu
   const footprint = context?.footprints?.[0];
   const length = footprint?.overall_length_ft || context?.dimensions?.find((dim) => dim.direction === "X")?.value_ft || 46;
   const width = footprint?.overall_width_ft || context?.dimensions?.find((dim) => dim.direction === "Y")?.value_ft || 30;
-  const scale = Math.min(248 / length, 172 / width);
+  const scale = Math.min(266 / length, 162 / width);
   const drawW = length * scale;
   const drawH = width * scale;
-  const x = 24 + (248 - drawW) / 2;
-  const y = 42 + (172 - drawH) / 2;
+  const x = 15 + (266 - drawW) / 2;
+  const y = 46 + (162 - drawH) / 2;
+  const statusColor = selectedMember?.status === "FAIL" ? "#b8642b" : selectedMember?.status === "ERROR" ? "#b5424c" : "#2f7d54";
 
   return (
     <section className="mini-visualizer">
       <div className="panel-title compact">
         <div>
-          <p className="eyebrow">Visualizer</p>
+          <p className="eyebrow">Member graphic</p>
           <h2>{selectedMember?.label || "Plan"}</h2>
         </div>
       </div>
       <svg viewBox="0 0 296 244" role="img" aria-label="Compact plan visualizer">
-        <rect x="1" y="1" width="294" height="242" rx="8" fill="#fff" stroke="#dce2da" />
-        <rect x={x} y={y} width={drawW} height={drawH} fill="#eef3ec" stroke="#29322d" strokeWidth="2" />
-        <line x1={x + drawW * 0.12} y1={y + drawH / 2} x2={x + drawW * 0.88} y2={y + drawH / 2} stroke="#b95f28" strokeWidth="3" />
-        <circle cx={x + drawW * 0.18} cy={y + drawH * 0.72} r="5" fill="#4e7a45" />
-        <line x1={x + drawW * 0.18} y1={y + drawH * 0.36} x2={x + drawW * 0.18} y2={y + drawH * 0.9} stroke="#29322d" strokeWidth="3" />
+        <rect x="1" y="1" width="294" height="242" rx="4" fill="#ffffff" stroke="#cfd8df" />
+        <path d="M18 32H278" stroke="#e6ebef" />
+        <path d="M18 210H278" stroke="#e6ebef" />
+        <rect x={x} y={y} width={drawW} height={drawH} fill="#f5f7f4" stroke="#263844" strokeWidth="2" />
+        <line x1={x + drawW * 0.1} y1={y + drawH / 2} x2={x + drawW * 0.9} y2={y + drawH / 2} stroke={statusColor} strokeWidth="4" />
+        <circle cx={x + drawW * 0.18} cy={y + drawH * 0.72} r="5" fill="#2f7d54" />
+        <line x1={x + drawW * 0.18} y1={y + drawH * 0.34} x2={x + drawW * 0.18} y2={y + drawH * 0.9} stroke="#263844" strokeWidth="3" />
         <text x={x + drawW - 4} y={y - 8} textAnchor="end" className="mini-svg-text">{formatNumber(length)} x {formatNumber(width)} ft</text>
         {selectedMember && (
           <g>
-            <rect x="20" y="210" width="256" height="22" rx="5" fill="#f0f3ee" />
+            <rect x="18" y="214" width="260" height="19" rx="3" fill="#eef3f5" />
             <text x="30" y="225" className="mini-svg-text">{selectedMember.systemLabel} / {selectedMember.typeLabel}</text>
           </g>
         )}
@@ -945,7 +1024,7 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisData | null }) {
     <section className="analysis-summary-panel">
       <div className="panel-title compact">
         <div>
-          <p className="eyebrow">Analysis</p>
+          <p className="eyebrow">Design summary</p>
           <h2>{analysis?.summary.overall || "Not run"}</h2>
         </div>
       </div>
@@ -957,6 +1036,24 @@ function AnalysisSummary({ analysis }: { analysis: AnalysisData | null }) {
       </div>
     </section>
   );
+}
+
+function groupInputEntries(entries: Array<[string, unknown]>) {
+  const groups = [
+    { label: "Member Info", match: ["zone", "mark", "type", "location", "supported", "level"], entries: [] as Array<[string, unknown]> },
+    { label: "Geometry", match: ["span", "length", "height", "width", "depth", "spacing", "pitch", "plies"], entries: [] as Array<[string, unknown]> },
+    { label: "Loads", match: ["load", "tributary", "bearing", "area", "pressure"], entries: [] as Array<[string, unknown]> },
+    { label: "Materials", match: ["size", "species", "grade", "material", "concrete", "sheathing", "rebar"], entries: [] as Array<[string, unknown]> },
+  ];
+  const other = { label: "Other", match: [] as string[], entries: [] as Array<[string, unknown]> };
+
+  entries.forEach((entry) => {
+    const key = entry[0].toLowerCase();
+    const group = groups.find((candidate) => candidate.match.some((term) => key.includes(term))) || other;
+    group.entries.push(entry);
+  });
+
+  return [...groups, other].filter((group) => group.entries.length > 0);
 }
 
 async function pollTask(taskId: string, apiBase: string, onMessage: (message: string) => void) {
