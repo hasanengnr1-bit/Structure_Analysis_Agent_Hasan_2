@@ -5,15 +5,57 @@ Reference values, section properties, and CF lookup for multiple species and gra
 
 import re
 
-# Section properties for sawn lumber (b, d, A, S, I)
-SECTION_PROPS = {
+ACTUAL_DIMENSION_IN = {
+    2: 1.5,
+    3: 2.5,
+    4: 3.5,
+    5: 4.5,
+    6: 5.5,
+    8: 7.25,
+    10: 9.25,
+    12: 11.25,
+    14: 13.25,
+    16: 15.25,
+}
+
+
+def _rect_section_props(b: float, d: float) -> dict[str, float]:
+    return {
+        "b": b,
+        "d": d,
+        "A": b * d,
+        "S": (b * (d**2)) / 6,
+        "I": (b * (d**3)) / 12,
+    }
+
+
+def _build_section_props() -> dict[str, dict[str, float]]:
+    """Build nominal sawn-lumber lookup using dressed dimensions."""
+    props: dict[str, dict[str, float]] = {}
+    nominal_widths = (2, 3, 4, 5, 6, 8, 10, 12)
+    nominal_depths = (2, 3, 4, 5, 6, 8, 10, 12, 14, 16)
+
+    for nominal_width in nominal_widths:
+        for nominal_depth in nominal_depths:
+            if nominal_depth < nominal_width:
+                continue
+            b = ACTUAL_DIMENSION_IN[nominal_width]
+            d = ACTUAL_DIMENSION_IN[nominal_depth]
+            props[f"{nominal_width}x{nominal_depth}"] = _rect_section_props(b, d)
+    return props
+
+
+# Section properties for sawn lumber (b, d, A, S, I).
+# Existing rounded values are preserved for legacy calculation stability.
+SECTION_PROPS = _build_section_props()
+SECTION_PROPS.update({
     "2x4": {"b": 1.5, "d": 3.5, "A": 5.25, "S": 3.063, "I": 5.359},
     "2x6": {"b": 1.5, "d": 5.5, "A": 8.25, "S": 7.563, "I": 20.80},
     "2x8": {"b": 1.5, "d": 7.25, "A": 10.875, "S": 13.14, "I": 47.63},
     "2x10": {"b": 1.5, "d": 9.25, "A": 13.875, "S": 21.39, "I": 98.93},
     "2x12": {"b": 1.5, "d": 11.25, "A": 16.875, "S": 31.64, "I": 177.98},
     "4x4": {"b": 3.5, "d": 3.5, "A": 12.25, "S": 7.146, "I": 12.505},
-}
+})
 
 # Base reference values (psi) for 2x4 sizes
 # ADDED Fc_perp (Fc_p)
