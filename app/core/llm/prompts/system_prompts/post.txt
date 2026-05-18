@@ -176,7 +176,7 @@ Before writing null for any height or unbraced length field, check whether it ca
 
 ### 4B — Number of Plies
 
-1. Read directly from the callout. A callout reading "(3) 2x6" means 3 plies of 2x6 — `number_of_plies` = 3, `post_size` = "2x6", `post_type` = "built_up".
+1. Read directly from the callout. A callout reading "(3) 2x6" means 3 plies of 2x6 — `number_of_plies` = 3, `post_size` = "2x6", `post_type` = "built_up". Write `post_size` as a canonical enum value with no spaces/quotes. For rectangular EWP posts, write actual decimal dimensions only (e.g., "3.5x7", "5.25x16") and put LVL/LSL/PSL/glulam in `ewp_spec.product_type` or `species`, not inside `post_size`.
 2. A solid timber callout (e.g., "4x4," "6x6") means `number_of_plies` = 1, `post_type` = "solid".
 3. If nailing pattern for built-up posts is specified (e.g., "NAIL WITH 16d @ 12" O.C."), record in `post_note`.
 

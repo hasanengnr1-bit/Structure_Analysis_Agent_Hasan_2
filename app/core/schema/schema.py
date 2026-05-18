@@ -23,6 +23,8 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Literal
 
+from .member_sizes import CanonicalMemberSize, EWPProductType
+
 
 # =====================================================================
 #  ENUMS & SHARED TYPES
@@ -36,13 +38,23 @@ SupportMaterial = Literal[
 
 
 class LumberSpec(BaseModel):
-    species: Literal["DF-L", "SP", "SPF", "HF"] | None = None
-    grade: Literal["SS", "No.1", "No.2", "No.3", "Stud"] | None = None
+    species: Literal["DF-L", "SP", "SPF", "HF", "LVL", "PSL", "LSL", "glulam"] | None = None
+    grade: Literal["SS", "No.1", "No.2", "No.3", "Stud", "1.55E", "2.0E", "2.2E", "24F-V4"] | None = None
     species_grade_note: str
+
+
+class EWPSpec(BaseModel):
+    product_type: EWPProductType | None = None
+    Fb_psi: float | None = None
+    Fv_psi: float | None = None
+    Fc_perp_psi: float | None = None
+    E_psi: float | None = None
+    E_min_psi: float | None = None
+
 
 class MemberSize(BaseModel):
     """Parsed member size. AI extracts size_label string, calc engine parses to dimensions."""
-    size_label: str | None = None               # EXTRACT: "2x10", "3-1/2 x 11-7/8", "LVL 1-3/4x14"
+    size_label: CanonicalMemberSize | None = None  # EXTRACT: canonical "2x10" or "1.75x11.875"
     nominal_width_in: int | None = None  # SKIP_EXTRACTION: parsed from size_label by calc engine
     nominal_depth_in: int | None = None  # SKIP_EXTRACTION: parsed from size_label by calc engine
 
@@ -218,9 +230,10 @@ class SoilData(BaseModel):
 
 class RoofRafter(BaseModel):
     zone: str
-    size: str                                     # EXTRACT: "2x8", "2x10" etc.
+    size: CanonicalMemberSize
     number_of_plies: int = 1
     lumber_spec: LumberSpec | None = None
+    ewp_spec: EWPSpec | None = None
     clear_span_ft: float | None = None
     clear_span_note: str = ""
     overhang_in: float | None = None
@@ -239,9 +252,10 @@ class RoofRafter(BaseModel):
 
 class CeilingJoist(BaseModel):
     zone: str
-    size: str
+    size: CanonicalMemberSize
     number_of_plies: int = 1
     lumber_spec: LumberSpec | None = None
+    ewp_spec: EWPSpec | None = None
     clear_span_ft: float | None = None
     clear_span_note: str = ""
     available_support_bearing_in: float | None = None
@@ -257,9 +271,10 @@ class CeilingJoist(BaseModel):
 
 class RidgeBeam(BaseModel):
     zone: str
-    size: str
+    size: CanonicalMemberSize
     number_of_plies: int
     lumber_spec: LumberSpec | None = None
+    ewp_spec: EWPSpec | None = None
     clear_span_ft: float | None = None
     clear_span_note: str = ""
     available_support_bearing_in: float | None = None
@@ -276,9 +291,10 @@ class RidgeBeam(BaseModel):
 class HipValleyRafter(BaseModel):
     zone: str
     member_type: Literal["hip", "valley"]
-    size: str
+    size: CanonicalMemberSize
     number_of_plies: int
     lumber_spec: LumberSpec | None = None
+    ewp_spec: EWPSpec | None = None
     clear_span_ft: float | None = None
     clear_span_note: str = ""
     roof_pitch: str | None = None
@@ -295,9 +311,10 @@ class HipValleyRafter(BaseModel):
 
 class RoofDropBeam(BaseModel):
     zone: str
-    size: str
+    size: CanonicalMemberSize
     number_of_plies: int
     lumber_spec: LumberSpec | None = None
+    ewp_spec: EWPSpec | None = None
     clear_span_ft: float | None = None
     clear_span_note: str = ""
     roof_pitch: str | None = None
@@ -314,9 +331,10 @@ class RoofDropBeam(BaseModel):
 
 class RoofFlushBeam(BaseModel):
     zone: str
-    size: str
+    size: CanonicalMemberSize
     number_of_plies: int
     lumber_spec: LumberSpec | None = None
+    ewp_spec: EWPSpec | None = None
     clear_span_ft: float | None = None
     clear_span_note: str = ""
     available_support_bearing_in: float | None = None
@@ -346,9 +364,10 @@ class RoofSystemData(BaseModel):
 
 class FloorJoist(BaseModel):
     zone: str
-    size: str
+    size: CanonicalMemberSize
     number_of_plies: int = 1
     lumber_spec: LumberSpec | None = None
+    ewp_spec: EWPSpec | None = None
     clear_span_ft: float | None = None
     clear_span_note: str | None = ""
     cantilever_ft: float | None = None
@@ -367,9 +386,10 @@ class FloorJoist(BaseModel):
 
 class FloorDropBeam(BaseModel):
     zone: str
-    size: str
+    size: CanonicalMemberSize
     number_of_plies: int
     lumber_spec: LumberSpec | None = None
+    ewp_spec: EWPSpec | None = None
     clear_span_ft: float | None = None
     clear_span_note: str | None = ""
     available_support_bearing_in: float | None = None
@@ -386,9 +406,10 @@ class FloorDropBeam(BaseModel):
 
 class FloorFlushBeam(BaseModel):
     zone: str
-    size: str
+    size: CanonicalMemberSize
     number_of_plies: int
     lumber_spec: LumberSpec | None = None
+    ewp_spec: EWPSpec | None = None
     clear_span_ft: float | None = None
     clear_span_note: str | None = ""
     available_support_bearing_in: float | None = None
@@ -459,7 +480,7 @@ class ContinuousStripFooting(BaseModel):
     anchor_bolt_end_of_plate_max_in: float = 12.0  # SKIP_EXTRACTION | default: 12" from plate ends
     plate_washer_required: bool | None = None
     plate_washer_spec: str = ""
-    sill_plate_size: str = ""
+    sill_plate_size: CanonicalMemberSize | None = None
     sill_plate_treated: bool = True               # SKIP_EXTRACTION | default: True (code required)
     footing_note: str = ""
     uncertain_areas: List[str] | None = None
@@ -487,7 +508,7 @@ class PadFooting(BaseModel):
     concrete_cover_in: float = 3.0                # SKIP_EXTRACTION | default: 3"
     post_base_model: str = ""
     post_base_anchor_type: Literal["cast_in", "epoxy_set"] | None = None
-    post_size: str = ""
+    post_size: CanonicalMemberSize | None = None
     footing_note: str = ""
     uncertain_areas: List[str] | None = None
 
@@ -566,10 +587,11 @@ class StandalonePost(BaseModel):
     functional_type: Literal[
         "bearing", "holdown", "corner",
     ] | None = None
-    post_size: str                                # EXTRACT: "4x4", "6x6", etc.
+    post_size: CanonicalMemberSize
     number_of_plies: int | None = None
-    species: str = ""
-    grade: str = ""
+    species: Literal["DF-L", "SP", "SPF", "HF", "LVL", "PSL", "LSL", "glulam"] | None = None
+    grade: Literal["SS", "No.1", "No.2", "No.3", "Stud", "1.55E", "2.0E", "2.2E", "24F-V4"] | None = None
+    ewp_spec: EWPSpec | None = None
     species_grade_note: str = ""
     height_ft: float | None = None
     height_note: str = ""
@@ -640,7 +662,7 @@ class ShearWall(BaseModel):
     boundary_nail_spacing_in: float | None = None
     nail_size: str = ""
     requires_3x_framing: bool = False             # SKIP_EXTRACTION: calc engine determines from nail spacing
-    stud_size: str = ""
+    stud_size: CanonicalMemberSize | None = None
     stud_spacing_in: float | None = None
     holdown_model: str = ""
     holdown_anchor_rod: str = ""
@@ -685,17 +707,18 @@ class ShearWallData(BaseModel):
 class StudWall(BaseModel):
     zone: str
     wall_type: Literal["exterior_bearing", "interior_bearing", "non_bearing_partition", "shear_wall"]
-    stud_size: str                                # EXTRACT: "2x4", "2x6"
+    stud_size: CanonicalMemberSize
     number_of_plies: int = 1
     lumber_spec: LumberSpec | None = None
+    ewp_spec: EWPSpec | None = None
     stud_height_ft: float | None = None
     stud_height_note: str = ""
     spacing_in: float = 16.0                      # EXTRACT_IF_VISIBLE | default: 16" o.c.
     wall_length_ft: float | None = None
     wall_length_note: str = ""
     top_plate: Literal["single", "double"] = "double"  # EXTRACT_IF_VISIBLE | default: double
-    top_plate_size: str | None = None
-    bottom_plate_size: str | None = None
+    top_plate_size: CanonicalMemberSize | None = None
+    bottom_plate_size: CanonicalMemberSize | None = None
     bottom_plate_treated: bool | None = None             # EXTRACT_IF_VISIBLE: True if on concrete
     sheathing_type: str | None = None
     sheathing_thickness_in: float | None = None
@@ -720,9 +743,10 @@ class Header(BaseModel):
     rough_opening_width_in: float | None = None
     rough_opening_height_in: float | None = None
     rough_opening_note: str = ""
-    header_size: str | None = None                       # EXTRACT: "2x12", "4x12", etc.
+    header_size: CanonicalMemberSize | None = None
     number_of_plies: int | None = None
     lumber_spec: LumberSpec | None = None
+    ewp_spec: EWPSpec | None = None
     header_clear_span_ft: float | None = None
     header_clear_span_note: str = ""
     bearing_wall: bool = True
@@ -747,7 +771,7 @@ class Header(BaseModel):
 class TopPlate(BaseModel):
     zone: str
     configuration: Literal["single", "double"] = "double"
-    size: str = ""
+    size: CanonicalMemberSize | None = None
     support_material: SupportMaterial | None = None
     splice_connector: str | None = None
     plate_note: str = ""
@@ -756,7 +780,7 @@ class TopPlate(BaseModel):
 
 class BottomPlate(BaseModel):
     zone: str
-    size: str = ""
+    size: CanonicalMemberSize | None = None
     pressure_treated: bool | None = None
     support_material: SupportMaterial | None = None
     anchor_bolt_spacing_in: float = 72.0          
@@ -857,7 +881,7 @@ class VisualOverlayItem(BaseModel):
     system: str
     label: str
     level: str | None = None
-    size: str | None = None
+    size: CanonicalMemberSize | None = None
     location_description: str | None = None
     span_ft: float | None = None
     spacing_in: float | None = None

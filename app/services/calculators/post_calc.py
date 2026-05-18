@@ -5,9 +5,15 @@ Pure axial column calculations including slenderness, combined loading, and plat
 from services.calculators.utils.adjustments import cp_factor
 from services.calculators.utils.lumber import get_section_props, get_ref_values, get_CF
 
-def check_post(name, system, application, size, species, grade, length_ft, D_lbs=0, L_lbs=0, Lr_lbs=0, S_lbs=0, support_species="SPF", lat_wind_psf=0, lat_trib_ft=0, ecc_ratio=0.1667):
+def check_post(name, system, application, size, species, grade, length_ft, D_lbs=0, L_lbs=0, Lr_lbs=0, S_lbs=0, support_species="SPF", lat_wind_psf=0, lat_trib_ft=0, ecc_ratio=0.1667, ewp_overrides=None):
     props = get_section_props(size, 1) # single sawn post
     refs = get_ref_values(species, grade)
+    if ewp_overrides:
+        if ewp_overrides.get("Fb_psi")      is not None: refs["Fb"]    = ewp_overrides["Fb_psi"]
+        if ewp_overrides.get("Fv_psi")      is not None: refs["Fv"]    = ewp_overrides["Fv_psi"]
+        if ewp_overrides.get("Fc_perp_psi") is not None: refs["Fc_p"]  = ewp_overrides["Fc_perp_psi"]
+        if ewp_overrides.get("E_psi")       is not None: refs["E"]     = ewp_overrides["E_psi"]
+        if ewp_overrides.get("E_min_psi")   is not None: refs["Emin"]  = ewp_overrides["E_min_psi"]
     length_in = length_ft * 12
     
     # Self-Weight Calculation

@@ -249,6 +249,9 @@ def _footing_info(env: Dict[str, Any]):
 def map_stud_wall(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
     """schema.StudWall -> stud_calc.check_stud kwargs"""
     species, grade = _lumber(item)
+    ewp_species, ewp_overrides = _ewp(item)
+    if ewp_species:
+        species = ewp_species
     spacing = float(item.get("spacing_in") or 16)
     trib_w = float(item.get("tributary_width_ft") or 0)
     wall_dl_psf = float(item.get("wall_dead_load_psf") or 0)
@@ -276,6 +279,7 @@ def map_stud_wall(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
         support_species=_support_species(item),
         unbraced_weak_ft=1.0,
         ecc_ratio=0.1667,
+        ewp_overrides=ewp_overrides,
     )
 
 
@@ -709,6 +713,9 @@ def map_post(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
     """schema.StandalonePost -> post_calc.check_post kwargs"""
     sp = item.get("species") or "DF-L"
     gr = _normalize_grade(item.get("grade")) or "No. 2"
+    ewp_species, ewp_overrides = _ewp(item)
+    if ewp_species:
+        sp = ewp_species
 
     trib = float(item.get("tributary_area_sf") or 0)
     point = float(item.get("point_load_lbs") or 0)
@@ -740,6 +747,7 @@ def map_post(item: Dict[str, Any], env: Dict[str, Any]) -> Dict[str, Any]:
         lat_wind_psf=0.0,
         lat_trib_ft=0.0,
         ecc_ratio=0.1667,
+        ewp_overrides=ewp_overrides,
     )
 
 

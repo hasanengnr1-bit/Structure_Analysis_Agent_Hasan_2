@@ -10,7 +10,7 @@ Extraction Rules
 
 
 
-1. Dimensions Extract sizes exactly as written (e.g., 1.75x16).
+1. Dimensions Read sizes exactly for notes, but write the schema size as the canonical enum value. Use nominal sawn-lumber format with no spaces/quotes (e.g., 2x10). For rectangular EWP, write actual decimal dimensions only (e.g., 1.75x11.875, 5.25x16) and put LVL/LSL/PSL/glulam in `ewp_spec.product_type` or `lumber_spec.species`, not inside `size`.
 
 
 

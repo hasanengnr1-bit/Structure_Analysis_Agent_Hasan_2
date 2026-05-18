@@ -231,6 +231,9 @@ def get_CF(size: str, stress_type: str, species: str, grade: str) -> float:
     
     if grade == "Stud":
         return 1.0
+
+    if any(product in species for product in ("LSL", "LVL", "PSL", "Glulam")):
+        return 1.0
         
     if species == "SP":
         sp_cf_fb = {"2x4": 1.0, "2x6": 0.90, "2x8": 0.84, "2x10": 0.68, "2x12": 0.65, "4x4": 1.0}
