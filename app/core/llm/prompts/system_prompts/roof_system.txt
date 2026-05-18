@@ -129,7 +129,7 @@ Pitch applies to rafters, hip/valley rafters, and ridge beams.
 
 ## EXTRACTION RULES
 
-**Rule 1 — Dimensions**: Extract member sizes in calculator-compatible compact format. Do not include inch marks, spaces around `x`, uppercase `X`, or words like `in`. Examples: output `2x6`, `2x10`, `1.75x16`, not `2"X10"`, `2 x 10`, or `2 in x 10 in`. If the callout is built-up, put the base member in `size` and the ply count in `number_of_plies`; e.g. `(3)2x12`, `3-2x12`, or `(3) 2" x 12"` becomes `"size": "2x12", "number_of_plies": 3`.
+**Rule 1 — Dimensions**: Extract sizes exactly as written (e.g., "2x6", "1.75x16", "(3)2x12").
 
 **Rule 2 — Units**: Span in decimal feet (ft). Bearing length, spacing, and overhang in inches (in). Pitch as X:12.
 

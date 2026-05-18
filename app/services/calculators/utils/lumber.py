@@ -68,45 +68,19 @@ def normalize_grade(grade: str) -> str:
     if "2.0" in g: return "2.0E"
     return grade
 
-def normalize_member_size(size: str | None, *, strip_plies: bool = False) -> str | None:
-    """Normalize extracted member dimensions to calculator-friendly notation.
-
-    Extraction models may return plan-style callouts such as 2" X 10",
-    2 in x 10 in, 2-2x10, or (3) 2" x 12". The calculators need the
-    cross-section portion in compact form, e.g. 2x10 or 1.75x16. By default
-    we preserve a leading ply marker for callers that need it, such as the
-    shear wall chord lookup. Section-property lookup passes strip_plies=True.
-    """
+def normalize_member_size(size: str | None) -> str | None:
+    """Normalize extracted member dimensions to the calculator lookup format."""
     if size is None:
         return None
     s = str(size).strip()
     if not s:
         return s
-    s = s.replace("×", "x").replace("X", "x")
-    s = re.sub(r"(?<=\d)\s*(?:\"|“|”|″)", "", s)
-    s = re.sub(r"(?<=\d)\s*(?:inches|inch|in\.?)\b", "", s, flags=re.IGNORECASE)
-    s = re.sub(r"\s*x\s*", "x", s)
-    s = re.sub(r"\s+", " ", s).strip()
-    s = re.sub(r"^\((\d+)\)\s*", r"(\1) ", s)
-    s = re.sub(r"^(\d+)\s*-\s*(?=\d+(?:\.\d+)?x)", r"(\1) ", s)
-    if strip_plies:
-        s = re.sub(r"^\(\d+\)\s*", "", s).strip()
-    return s
-
-
-def _section_size_and_plies(size: str, plies: int) -> tuple[str, int]:
-    normalized = normalize_member_size(size) or ""
-    effective_plies = int(plies or 1)
-    ply_match = re.match(r"^\((\d+)\)\s*(.+)$", normalized)
-    if ply_match:
-        if effective_plies <= 1:
-            effective_plies = int(ply_match.group(1))
-        normalized = ply_match.group(2).strip()
-    return normalize_member_size(normalized, strip_plies=True) or normalized, effective_plies
+    s = re.sub(r"\s*[xX]\s*", "x", s)
+    return re.sub(r"\s+", " ", s)
 
 def get_CF(size: str, stress_type: str, species: str, grade: str) -> float:
     """Size Factor (CF) per NDS Supplement Tables."""
-    size = normalize_member_size(size, strip_plies=True)
+    size = normalize_member_size(size)
     species = normalize_species(species)
     grade = normalize_grade(grade)
     
@@ -127,7 +101,7 @@ def get_CF(size: str, stress_type: str, species: str, grade: str) -> float:
         return 1.0
 
 def get_section_props(size: str, plies: int = 1):
-    size, plies = _section_size_and_plies(size, plies)
+    size = normalize_member_size(size)
     try:
         # Check standard dictionary first
         base = SECTION_PROPS[size]
