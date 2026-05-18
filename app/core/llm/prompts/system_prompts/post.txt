@@ -98,6 +98,8 @@ For every post identified, check whether a detail callout bubble points to a sec
 
 Attempt size resolution in this exact order. Stop at the first method that succeeds and record which was used.
 
+**Calculator-compatible output format**: Write `post_size` as the compact base member size only. Do not include inch marks, spaces around `x`, uppercase `X`, or words like `in`. Examples: output `4x4`, `6x6`, `2x6`, not `4"X4"`, `6 x 6`, or `2 in x 6 in`. For built-up posts, put the base member in `post_size` and the ply count in `number_of_plies`; e.g. `(3) 2" x 6"` or `3-2x6` becomes `"post_size": "2x6", "number_of_plies": 3`.
+
 **a. Direct framing plan callout**: Read any size annotation alongside or pointing to the post symbol (e.g., "4x6 POST," "6x6"). Record sheet and exact string.
 
 **b. Detail reference — MANDATORY**: For every detail callout bubble identified in Phase 2D, navigate to that detail sheet NOW. Read the post size from the detail. This step is not optional — if a detail callout exists and you have not checked it, you have not completed method (b). Record the detail sheet number and exact size string found.

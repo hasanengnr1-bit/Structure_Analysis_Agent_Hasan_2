@@ -68,6 +68,7 @@ If framing plans call out "HDU2" at shear wall king studs, the `holdown_model` i
 Extract into the JSON schema. Key rules:
 
 - **Every** schedule row → separate JSON entry.
+- **Member size formatting**: Write wood member sizes in calculator-compatible compact format. Do not include inch marks, spaces around `x`, uppercase `X`, or words like `in`. Examples: output `2x4`, `2x6`, `4x6`, not `2"X6"`, `2 x 6`, or `2 in x 6 in`. For built-up chord/member callouts, keep the ply count separate when the schema provides a ply/count field; otherwise use a compact chord string such as `(2) 2x6`.
 - **Pier lengths**: read dimensioned lengths from framing plans. Each dimensioned shear wall segment is a pier.
 - **Wall heights**: derive from sections/elevations if not on framing plans.
 - **Nailing**: read edge, field, AND boundary nail spacing from schedule. Note nail size AND whether 3x framing is required.

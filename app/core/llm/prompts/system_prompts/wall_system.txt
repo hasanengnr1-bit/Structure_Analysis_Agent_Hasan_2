@@ -141,7 +141,7 @@ For every opening identified in Phase 2, Step 5:
 
 ## EXTRACTION RULES
 
-**Rule 1 — Dimensions**: Extract sizes exactly as written (e.g., "2x4", "2x6", "(2)2x10", "4x6 post").
+**Rule 1 — Dimensions**: Extract member sizes in calculator-compatible compact format. Do not include inch marks, spaces around `x`, uppercase `X`, or words like `in`. Examples: output `2x4`, `2x6`, `2x10`, `4x6`, not `2"X10"`, `2 x 10`, or `2 in x 10 in`. If the callout is built-up, put the base member in `stud_size` or `header_size` and the ply count in `number_of_plies`; e.g. `(2)2x10`, `2-2x10`, or `(2) 2" x 10"` becomes `"header_size": "2x10", "number_of_plies": 2`.
 
 **Rule 2 — Units**: Wall height and clear span in decimal feet (ft). Stud spacing, bearing length, and R.O. width in inches (in). Loads in psf or mph as appropriate.
 
